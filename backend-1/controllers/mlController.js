@@ -1,4 +1,8 @@
+// backend-1/controllers/mlController.js
+
 const axios = require('axios');
+// 1. TAMBAHKAN IMPORT INI:
+const { Recommendation } = require('../models'); 
 
 const ML_BACKEND_URL = process.env.ML_BACKEND_URL || 'http://localhost:5001';
 
@@ -8,6 +12,14 @@ exports.generateRecommendation = async (req, res) => {
         const customerData = req.body;
 
         console.log(`🤖 Generating ML prediction for userId: ${userId}`);
+
+        // 2. TAMBAHKAN KODE INI UNTUK MENGHAPUS REKOMENDASI LAMA:
+        // ============================================================
+        console.log(`🧹 Clearing old recommendations for user: ${userId}`);
+        await Recommendation.destroy({
+            where: { userId: userId }
+        });
+        // ============================================================
 
         // Validasi input
         const requiredFields = [
