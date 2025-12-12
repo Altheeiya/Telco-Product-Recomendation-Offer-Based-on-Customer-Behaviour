@@ -10,11 +10,18 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-    // Rekomendasi milik satu User
-    Recommendation.belongsTo(models.User, { foreignKey: 'userId' });
-    // Rekomendasi menyarankan satu Produk
-    Recommendation.belongsTo(models.Product, { foreignKey: 'productId' });
-  }
+      // Rekomendasi milik satu User
+      Recommendation.belongsTo(models.User, { 
+        foreignKey: 'userId',
+        as: 'user'
+      });
+      
+      // Rekomendasi menyarankan satu Produk
+      Recommendation.belongsTo(models.Product, { 
+        foreignKey: 'productId',
+        as: 'product'
+      });
+    }
   }
   Recommendation.init({
     userId: DataTypes.INTEGER,

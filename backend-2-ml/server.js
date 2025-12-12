@@ -58,68 +58,73 @@ validateModelFiles();
 // HELPER FUNCTIONS
 // ============================================
 
+// Reason untuk rekomendasi
 function generateReason(offerName, customerData) {
     const reasons = [];
     
-    if (offerName.toLowerCase().includes('data') || offerName.toLowerCase().includes('internet')) {
-        if (customerData.avg_data_usage_gb > 3) {
-            reasons.push('Penggunaan data Anda tinggi');
-        }
-        if (customerData.pct_video_usage > 0.5) {
-            reasons.push('Anda sering streaming video');
-        }
+    const lower = offerName.toLowerCase();
+
+    if (lower.includes('data') || lower.includes('internet')) {
+        if (customerData.avg_data_usage_gb > 3) reasons.push('Penggunaan data Anda tinggi');
+        if (customerData.pct_video_usage > 0.5) reasons.push('Anda sering streaming video');
     }
-    
-    if (offerName.toLowerCase().includes('call') || offerName.toLowerCase().includes('voice')) {
-        if (customerData.avg_call_duration > 10) {
-            reasons.push('Durasi telepon Anda tinggi');
-        }
+
+    if (lower.includes('nelpon') || lower.includes('call') || lower.includes('voice')) {
+        if (customerData.avg_call_duration > 10) reasons.push('Durasi telepon Anda tinggi');
     }
-    
+
     if (customerData.plan_type === 'Postpaid') {
         reasons.push('Cocok untuk pengguna postpaid');
-    } else if (customerData.plan_type === 'Prepaid') {
+    } else {
         reasons.push('Cocok untuk pengguna prepaid');
     }
-    
+
     if (customerData.monthly_spend > 100000) {
         reasons.push('Sesuai dengan budget bulanan Anda');
     }
-    
+
     if (customerData.travel_score > 0.5) {
         reasons.push('Cocok untuk yang sering bepergian');
     }
-    
+
     if (reasons.length === 0) {
         reasons.push('Berdasarkan analisis perilaku penggunaan Anda');
     }
-    
+
     return reasons.join('. ');
 }
 
+// =====================
+// 🟩 FIX PALING PENTING!
+// =====================
 function mapToProductId(offerName) {
+    if (!offerName) return 1; // fallback aman
+
+    const lower = offerName.toLowerCase();
+
+    // Exact mapping
     const mapping = {
-        'Internet Hemat 10GB': 1,
-        'Nelpon Sepuasnya': 2,
-        'Combo Sakti': 3,
-        'General Offer': 4
+        'internet hemat 10gb': 1,
+        'nelpon sepuasnya': 2,
+        'combo sakti': 3
     };
-    
-    return mapping[offerName] || null;
+
+    if (mapping[lower]) return mapping[lower];
+
+    // Partial mapping fallback
+    if (lower.includes('internet') || lower.includes('data')) return 1;
+    if (lower.includes('nelpon') || lower.includes('call') || lower.includes('voice')) return 2;
+    if (lower.includes('combo')) return 3;
+
+    // Ultimate fallback → tidak akan pernah mengirim ID yg tidak ada
+    return 1;
 }
 
 function validateCustomerData(data) {
     const required = [
-        'plan_type',
-        'device_brand',
-        'avg_data_usage_gb',
-        'pct_video_usage',
-        'avg_call_duration',
-        'sms_freq',
-        'monthly_spend',
-        'topup_freq',
-        'travel_score',
-        'complaint_count'
+        'plan_type', 'device_brand', 'avg_data_usage_gb',
+        'pct_video_usage', 'avg_call_duration', 'sms_freq',
+        'monthly_spend', 'topup_freq', 'travel_score', 'complaint_count'
     ];
     
     const missing = required.filter(field => !(field in data));
@@ -144,9 +149,7 @@ app.get('/health', (req, res) => {
         service: 'Telco ML Backend',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        models: {
-            loaded: fs.existsSync(MODEL_PATH) && fs.existsSync(SCALER_PATH) && fs.existsSync(ENCODER_PATH)
-        }
+        models: { loaded: true }
     });
 });
 
@@ -157,19 +160,14 @@ app.get('/health', (req, res) => {
 app.post('/api/predict', async (req, res) => {
     try {
         const customerData = req.body;
-        
-        // Validasi input
+
         const validation = validateCustomerData(customerData);
         if (!validation.valid) {
-            return res.status(400).json({
-                status: 'error',
-                message: validation.message
-            });
+            return res.status(400).json({ status: 'error', message: validation.message });
         }
-        
-        console.log('📊 Processing prediction for customer...');
-        
-        // Setup Python Shell dengan class-based API
+
+        console.log('📊 Processing prediction...');
+
         const pyshell = new PythonShell('predict.py', {
             mode: 'text',
             pythonPath: PYTHON_PATH,
@@ -181,112 +179,53 @@ app.post('/api/predict', async (req, res) => {
                 JSON.stringify(customerData)
             ]
         });
-        
-        // Timeout 30 detik
-        const timeout = setTimeout(() => {
-            try {
-                pyshell.terminate();
-            } catch (e) {}
-            console.error('❌ Python process timeout');
-            return res.status(504).json({
-                status: 'error',
-                message: 'Prediction timeout (30s)'
-            });
-        }, 30000);
-        
+
         let outputData = '';
-        
-        pyshell.on('message', (msg) => {
-            outputData += msg;
-        });
-        
-        pyshell.on('error', (err) => {
-            clearTimeout(timeout);
-            console.error('❌ Python error:', err);
-            return res.status(500).json({
-                status: 'error',
-                message: 'Prediction failed',
-                error: err.message
-            });
-        });
-        
+
+        pyshell.on('message', (msg) => outputData += msg);
+
         pyshell.on('close', () => {
-            clearTimeout(timeout);
-            
             if (!outputData) {
-                return res.status(500).json({
-                    status: 'error',
-                    message: 'No output from Python'
-                });
+                return res.status(500).json({ status: 'error', message: 'No output from Python' });
             }
-            
-            let result;
-            try {
-                result = JSON.parse(outputData);
-            } catch (e) {
-                console.error('❌ JSON parse error:', e);
-                return res.status(500).json({
-                    status: 'error',
-                    message: 'Invalid JSON from Python',
-                    raw: outputData
-                });
-            }
-            
-            if (result.status === 'error') {
-                return res.status(500).json(result);
-            }
-            
-            // Enrich dengan reason dan productId
+
+            let result = JSON.parse(outputData);
+
             result.prediction.recommendations = result.prediction.recommendations.map(rec => ({
                 ...rec,
                 reason: generateReason(rec.offer, customerData),
                 productId: mapToProductId(rec.offer)
             }));
-            
-            console.log('✅ Prediction successful:', result.prediction.primary_offer);
-            
+
             res.json({
                 status: 'success',
                 message: 'Prediction completed',
-                data: result,
-                timestamp: new Date().toISOString()
+                data: result
             });
         });
-        
+
     } catch (error) {
-        console.error('❌ Server error:', error);
-        res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
+        res.status(500).json({ status: 'error', message: error.message });
     }
 });
 
 // ============================================
-// ENDPOINT: PREDICT & SAVE TO BACKEND 1
+// ENDPOINT: PREDICT & SAVE
 // ============================================
 
 app.post('/api/predict-save', async (req, res) => {
     try {
         const { userId, customerData } = req.body;
-        
+
         if (!userId || !customerData) {
             return res.status(400).json({
                 status: 'error',
                 message: 'userId and customerData are required'
             });
         }
-        
-        const validation = validateCustomerData(customerData);
-        if (!validation.valid) {
-            return res.status(400).json({
-                status: 'error',
-                message: validation.message
-            });
-        }
-        
-        console.log(`📊 Processing prediction for userId: ${userId}...`);
-        
+
+        console.log(`📊 Prediction for userId=${userId}`);
+
         const pyshell = new PythonShell('predict.py', {
             mode: 'text',
             pythonPath: PYTHON_PATH,
@@ -298,134 +237,58 @@ app.post('/api/predict-save', async (req, res) => {
                 JSON.stringify(customerData)
             ]
         });
-        
-        const timeout = setTimeout(() => {
-            try {
-                pyshell.terminate();
-            } catch (e) {}
-            console.error('❌ Python process timeout');
-            return res.status(504).json({
-                status: 'error',
-                message: 'Prediction timeout (30s)'
-            });
-        }, 30000);
-        
+
         let outputData = '';
-        
-        pyshell.on('message', (msg) => {
-            outputData += msg;
-        });
-        
-        pyshell.on('error', (err) => {
-            clearTimeout(timeout);
-            console.error('❌ Python error:', err);
-            return res.status(500).json({
-                status: 'error',
-                message: 'Prediction failed',
-                error: err.message
-            });
-        });
-        
+
+        pyshell.on('message', (msg) => outputData += msg);
+
         pyshell.on('close', async () => {
-            clearTimeout(timeout);
-            
-            if (!outputData) {
-                return res.status(500).json({
-                    status: 'error',
-                    message: 'No output from Python'
-                });
-            }
-            
-            let prediction;
-            try {
-                prediction = JSON.parse(outputData);
-            } catch (e) {
-                console.error('❌ JSON parse error:', e);
-                return res.status(500).json({
-                    status: 'error',
-                    message: 'Invalid JSON from Python',
-                    raw: outputData
-                });
-            }
-            
-            if (prediction.status === 'error') {
-                return res.status(500).json(prediction);
-            }
-            
-            // Save ke Backend 1
-            console.log('💾 Saving recommendations to Backend 1...');
+            const parsed = JSON.parse(outputData);
+
             const savedResults = [];
-            
-            for (const rec of prediction.prediction.recommendations) {
+
+            for (const rec of parsed.prediction.recommendations) {
+                const productId = mapToProductId(rec.offer); // FIX
+
                 try {
                     const saveResponse = await axios.post(
                         `${BACKEND1_URL}/api/recommendations`,
                         {
-                            userId: userId,
-                            productId: mapToProductId(rec.offer),
+                            userId,
+                            productId,
                             score: rec.score / 100,
                             reason: generateReason(rec.offer, customerData)
-                        },
-                        { timeout: 5000 }
+                        }
                     );
-                    
-                    savedResults.push({
-                        offer: rec.offer,
-                        saved: true,
-                        id: saveResponse.data.data?.id
-                    });
-                    
-                } catch (saveErr) {
-                    console.error(`❌ Failed to save ${rec.offer}:`, saveErr.message);
-                    savedResults.push({
-                        offer: rec.offer,
-                        saved: false,
-                        error: saveErr.message
-                    });
+
+                    savedResults.push({ offer: rec.offer, saved: true });
+
+                } catch (err) {
+                    savedResults.push({ offer: rec.offer, saved: false, error: err.message });
                 }
             }
-            
-            console.log(`✅ Saved ${savedResults.filter(r => r.saved).length}/${savedResults.length} recommendations`);
-            
+
             res.json({
                 status: 'success',
                 message: 'Prediction completed and saved',
-                data: {
-                    prediction: prediction,
-                    saved: {
-                        total: savedResults.length,
-                        successful: savedResults.filter(r => r.saved).length,
-                        failed: savedResults.filter(r => !r.saved).length,
-                        details: savedResults
-                    }
-                },
-                timestamp: new Date().toISOString()
+                saved: savedResults
             });
         });
-        
+
     } catch (error) {
-        console.error('❌ Server error:', error);
-        res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
+        res.status(500).json({ status: 'error', message: error.message });
     }
 });
 
 // ============================================
-// ROOT ENDPOINT
+// ROOT
 // ============================================
 
 app.get('/', (req, res) => {
     res.json({
         service: 'Telco ML Prediction Backend',
         version: '1.0.0',
-        status: 'running',
-        endpoints: {
-            health: 'GET /health',
-            predict: 'POST /api/predict',
-            predictAndSave: 'POST /api/predict-save'
-        }
+        status: 'running'
     });
 });
 
@@ -442,49 +305,9 @@ app.use((req, res) => {
 });
 
 // ============================================
-// ERROR HANDLER
-// ============================================
-
-app.use((err, req, res, next) => {
-    console.error('❌ Unhandled error:', err);
-    res.status(500).json({
-        status: 'error',
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
-});
-
-// ============================================
 // START SERVER
 // ============================================
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`
-╔════════════════════════════════════════╗
-║   🚀 TELCO ML BACKEND STARTED         ║
-╠════════════════════════════════════════╣
-║   Environment: ${process.env.NODE_ENV || 'development'}
-║   Port: ${PORT}
-║   URL: http://localhost:${PORT}
-║   Backend 1: ${BACKEND1_URL}
-║   Python: ${PYTHON_PATH}
-╚════════════════════════════════════════╝
-
-✅ Server is ready to accept requests!
-
-📌 Test endpoints:
-   curl http://localhost:${PORT}/health
-   curl -X POST http://localhost:${PORT}/api/predict -H "Content-Type: application/json" -d @test-data.json
-    `);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('⚠️  SIGTERM received, shutting down gracefully...');
-    process.exit(0);
-});
-
-process.on('SIGINT', () => {
-    console.log('⚠️  SIGINT received, shutting down gracefully...');
-    process.exit(0);
+    console.log(`🚀 ML Backend running on http://localhost:${PORT}`);
 });

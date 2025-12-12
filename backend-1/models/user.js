@@ -10,11 +10,18 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-    // Satu User bisa punya banyak Transaksi
-    User.hasMany(models.Transaction, { foreignKey: 'userId' });
-    // Satu User bisa punya banyak Rekomendasi
-    User.hasMany(models.Recommendation, { foreignKey: 'userId' });
-  }
+      // Satu User bisa punya banyak Transaksi
+      User.hasMany(models.Transaction, { 
+        foreignKey: 'userId',
+        as: 'transactions'
+      });
+      
+      // Satu User bisa punya banyak Rekomendasi
+      User.hasMany(models.Recommendation, { 
+        foreignKey: 'userId',
+        as: 'recommendations'
+      });
+    }
   }
   User.init({
     username: DataTypes.STRING,

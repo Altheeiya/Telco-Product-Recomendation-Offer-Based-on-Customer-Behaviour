@@ -10,11 +10,18 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-    // Transaksi milik satu User
-    Transaction.belongsTo(models.User, { foreignKey: 'userId' });
-    // Transaksi terhubung ke satu Produk
-    Transaction.belongsTo(models.Product, { foreignKey: 'productId' });
-  }
+      // Transaksi milik satu User
+      Transaction.belongsTo(models.User, { 
+        foreignKey: 'userId',
+        as: 'user'
+      });
+      
+      // Transaksi terhubung ke satu Produk
+      Transaction.belongsTo(models.Product, { 
+        foreignKey: 'productId',
+        as: 'product'
+      });
+    }
   }
   Transaction.init({
     userId: DataTypes.INTEGER,
