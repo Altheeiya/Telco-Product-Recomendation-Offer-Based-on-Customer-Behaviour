@@ -55,69 +55,156 @@ function validateModelFiles() {
 validateModelFiles();
 
 // ============================================
-// HELPER FUNCTIONS
+// HELPER FUNCTIONS - FIXED VERSION
 // ============================================
 
-// Reason untuk rekomendasi
+// 🆕 DYNAMIC MAPPING - Fetch products dan match otomatis
+async function mapToProductIdDynamic(offerName, allProducts) {
+    if (!offerName) {
+        console.log('⚠️ No offer name provided, using first product');
+        return allProducts[0]?.id || 1;
+    }
+    
+    const lower = offerName.toLowerCase().trim();
+    console.log(`\n🔍 Mapping offer: "${offerName}"`);
+    console.log(`   Lowercase: "${lower}"`);
+    
+    // 1. EXACT NAME MATCH
+    const exactMatch = allProducts.find(p => 
+        p.name.toLowerCase().trim() === lower
+    );
+    if (exactMatch) {
+        console.log(`✅ EXACT match found: "${exactMatch.name}" (ID: ${exactMatch.id})`);
+        return exactMatch.id;
+    }
+    
+    // 2. PARTIAL NAME MATCH (offer includes product name)
+    const partialMatch = allProducts.find(p => {
+        const productName = p.name.toLowerCase();
+        return lower.includes(productName) || productName.includes(lower);
+    });
+    if (partialMatch) {
+        console.log(`✅ PARTIAL match found: "${partialMatch.name}" (ID: ${partialMatch.id})`);
+        return partialMatch.id;
+    }
+    
+    // 3. KEYWORD-BASED MAPPING
+    const keywordMapping = {
+        'data': ['data', 'internet', 'kuota', 'booster', 'gb', 'streaming'],
+        'device': ['device', 'upgrade', 'hp', 'handphone', 'phone', 'tukar'],
+        'family': ['family', 'keluarga', 'share', 'berbagi'],
+        'general': ['general', 'hemat', 'paket', 'mix'],
+        'retention': ['retention', 'loyal', 'setia', 'special', 'spesial'],
+        'roaming': ['roaming', 'travel', 'luar negeri', 'international', 'pass'],
+        'streaming': ['streaming', 'video', 'netflix', 'youtube', 'nonton', 'partner'],
+        'topup': ['top-up', 'topup', 'isi ulang', 'pulsa', 'promo', 'bonus'],
+        'voice': ['voice', 'call', 'nelpon', 'telepon', 'talktime', 'sms', 'bundle'],
+    };
+    
+    // Check each product's category and name against keywords
+    for (const product of allProducts) {
+        const productLower = product.name.toLowerCase();
+        const categoryLower = product.category?.toLowerCase() || '';
+        
+        for (const [type, keywords] of Object.entries(keywordMapping)) {
+            const hasKeyword = keywords.some(keyword => 
+                lower.includes(keyword) || 
+                productLower.includes(keyword) ||
+                categoryLower.includes(keyword)
+            );
+            
+            if (hasKeyword) {
+                // Check if product also matches this keyword type
+                const productMatches = keywords.some(keyword =>
+                    productLower.includes(keyword)
+                );
+                
+                if (productMatches) {
+                    console.log(`✅ KEYWORD match: "${product.name}" (ID: ${product.id}) via "${type}"`);
+                    return product.id;
+                }
+            }
+        }
+    }
+    
+    // 4. CATEGORY MATCH
+    const categoryMatch = allProducts.find(p => {
+        const cat = p.category?.toLowerCase() || '';
+        return cat && (lower.includes(cat) || cat.includes(lower));
+    });
+    if (categoryMatch) {
+        console.log(`✅ CATEGORY match: "${categoryMatch.name}" (ID: ${categoryMatch.id})`);
+        return categoryMatch.id;
+    }
+    
+    // 5. ULTIMATE FALLBACK - Return first product
+    console.log(`⚠️ No match found for "${offerName}", using fallback: "${allProducts[0]?.name}" (ID: ${allProducts[0]?.id})`);
+    return allProducts[0]?.id || 1;
+}
+
+// Generate reason untuk rekomendasi
 function generateReason(offerName, customerData) {
     const reasons = [];
-    
     const lower = offerName.toLowerCase();
 
-    if (lower.includes('data') || lower.includes('internet')) {
-        if (customerData.avg_data_usage_gb > 3) reasons.push('Penggunaan data Anda tinggi');
-        if (customerData.pct_video_usage > 0.5) reasons.push('Anda sering streaming video');
+    // Data usage patterns
+    if (customerData.avg_data_usage_gb > 5) {
+        reasons.push('Penggunaan data Anda tinggi (>5GB/bulan)');
+    } else if (customerData.avg_data_usage_gb > 2) {
+        reasons.push('Penggunaan data Anda sedang');
     }
 
-    if (lower.includes('nelpon') || lower.includes('call') || lower.includes('voice')) {
-        if (customerData.avg_call_duration > 10) reasons.push('Durasi telepon Anda tinggi');
+    // Video streaming
+    if (customerData.pct_video_usage > 0.6) {
+        reasons.push('Anda sering streaming video');
+    } else if (customerData.pct_video_usage > 0.3) {
+        reasons.push('Anda kadang streaming video');
     }
 
+    // Call patterns
+    if (customerData.avg_call_duration > 20) {
+        reasons.push('Durasi telepon Anda tinggi');
+    } else if (customerData.avg_call_duration > 10) {
+        reasons.push('Anda cukup sering menelepon');
+    }
+
+    // Plan type
     if (customerData.plan_type === 'Postpaid') {
         reasons.push('Cocok untuk pengguna postpaid');
     } else {
         reasons.push('Cocok untuk pengguna prepaid');
     }
 
-    if (customerData.monthly_spend > 100000) {
+    // Spending
+    if (customerData.monthly_spend > 150000) {
+        reasons.push('Sesuai dengan budget premium Anda');
+    } else if (customerData.monthly_spend > 100000) {
         reasons.push('Sesuai dengan budget bulanan Anda');
+    } else {
+        reasons.push('Paket hemat sesuai budget Anda');
     }
 
+    // Travel
     if (customerData.travel_score > 0.5) {
         reasons.push('Cocok untuk yang sering bepergian');
     }
 
+    // Loyalty
+    if (customerData.complaint_count === 0) {
+        reasons.push('Penawaran untuk pelanggan loyal');
+    }
+
+    // Top-up frequency
+    if (customerData.topup_freq > 4) {
+        reasons.push('Hemat biaya top-up bulanan');
+    }
+
+    // Default reason
     if (reasons.length === 0) {
         reasons.push('Berdasarkan analisis perilaku penggunaan Anda');
     }
 
-    return reasons.join('. ');
-}
-
-// =====================
-// 🟩 FIX PALING PENTING!
-// =====================
-function mapToProductId(offerName) {
-    if (!offerName) return 1; // fallback aman
-
-    const lower = offerName.toLowerCase();
-
-    // Exact mapping
-    const mapping = {
-        'internet hemat 10gb': 1,
-        'nelpon sepuasnya': 2,
-        'combo sakti': 3
-    };
-
-    if (mapping[lower]) return mapping[lower];
-
-    // Partial mapping fallback
-    if (lower.includes('internet') || lower.includes('data')) return 1;
-    if (lower.includes('nelpon') || lower.includes('call') || lower.includes('voice')) return 2;
-    if (lower.includes('combo')) return 3;
-
-    // Ultimate fallback → tidak akan pernah mengirim ID yg tidak ada
-    return 1;
+    return reasons.slice(0, 3).join('. ') + '.';
 }
 
 function validateCustomerData(data) {
@@ -146,15 +233,16 @@ function validateCustomerData(data) {
 app.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
-        service: 'Telco ML Backend',
+        service: 'Telco ML Backend (FIXED VERSION)',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        models: { loaded: true }
+        models: { loaded: true },
+        backend1: BACKEND1_URL
     });
 });
 
 // ============================================
-// ENDPOINT: PREDICT (SINGLE)
+// ENDPOINT: PREDICT (SINGLE) - UPDATED
 // ============================================
 
 app.post('/api/predict', async (req, res) => {
@@ -184,18 +272,38 @@ app.post('/api/predict', async (req, res) => {
 
         pyshell.on('message', (msg) => outputData += msg);
 
-        pyshell.on('close', () => {
+        pyshell.on('close', async () => {
             if (!outputData) {
                 return res.status(500).json({ status: 'error', message: 'No output from Python' });
             }
 
             let result = JSON.parse(outputData);
 
-            result.prediction.recommendations = result.prediction.recommendations.map(rec => ({
-                ...rec,
-                reason: generateReason(rec.offer, customerData),
-                productId: mapToProductId(rec.offer)
-            }));
+            // 🆕 Fetch products for dynamic mapping
+            try {
+                const productsResponse = await axios.get(`${BACKEND1_URL}/api/products`);
+                const allProducts = productsResponse.data.data || productsResponse.data;
+                
+                console.log(`\n📦 Fetched ${allProducts.length} products from database`);
+
+                // Map each recommendation to actual product
+                result.prediction.recommendations = await Promise.all(
+                    result.prediction.recommendations.map(async (rec) => {
+                        const productId = await mapToProductIdDynamic(rec.offer, allProducts);
+                        const product = allProducts.find(p => p.id === productId);
+                        
+                        return {
+                            ...rec,
+                            productId,
+                            productName: product?.name || rec.offer,
+                            reason: generateReason(rec.offer, customerData)
+                        };
+                    })
+                );
+
+            } catch (err) {
+                console.error('⚠️ Could not fetch products, using fallback mapping:', err.message);
+            }
 
             res.json({
                 status: 'success',
@@ -210,7 +318,7 @@ app.post('/api/predict', async (req, res) => {
 });
 
 // ============================================
-// ENDPOINT: PREDICT & SAVE
+// ENDPOINT: PREDICT & SAVE - FIXED VERSION
 // ============================================
 
 app.post('/api/predict-save', async (req, res) => {
@@ -224,8 +332,31 @@ app.post('/api/predict-save', async (req, res) => {
             });
         }
 
-        console.log(`📊 Prediction for userId=${userId}`);
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`🤖 GENERATING RECOMMENDATIONS FOR USER ${userId}`);
+        console.log(`${'='.repeat(60)}\n`);
 
+        // 🆕 STEP 1: Fetch all products from Backend 1
+        console.log('📦 Step 1: Fetching products from Backend 1...');
+        let allProducts = [];
+        try {
+            const productsResponse = await axios.get(`${BACKEND1_URL}/api/products`);
+            allProducts = productsResponse.data.data || productsResponse.data;
+            console.log(`✅ Fetched ${allProducts.length} products:`);
+            allProducts.forEach(p => {
+                console.log(`   - ID ${p.id}: ${p.name} (${p.category})`);
+            });
+        } catch (err) {
+            console.error('❌ Failed to fetch products:', err.message);
+            return res.status(503).json({
+                status: 'error',
+                message: 'Could not fetch products from Backend 1',
+                hint: 'Make sure Backend 1 is running'
+            });
+        }
+
+        // STEP 2: Run ML Prediction
+        console.log('\n🧠 Step 2: Running ML prediction...');
         const pyshell = new PythonShell('predict.py', {
             mode: 'text',
             pythonPath: PYTHON_PATH,
@@ -239,44 +370,103 @@ app.post('/api/predict-save', async (req, res) => {
         });
 
         let outputData = '';
-
         pyshell.on('message', (msg) => outputData += msg);
 
         pyshell.on('close', async () => {
-            const parsed = JSON.parse(outputData);
+            try {
+                const parsed = JSON.parse(outputData);
+                
+                console.log('\n✅ ML Predictions received:');
+                parsed.prediction.recommendations.forEach((rec, idx) => {
+                    console.log(`   ${idx + 1}. ${rec.offer} (score: ${rec.score}%)`);
+                });
 
-            const savedResults = [];
+                // STEP 3: Map predictions to actual products and save
+                console.log('\n💾 Step 3: Mapping and saving recommendations...');
+                const savedResults = [];
 
-            for (const rec of parsed.prediction.recommendations) {
-                const productId = mapToProductId(rec.offer); // FIX
+                for (const rec of parsed.prediction.recommendations) {
+                    // 🆕 Use dynamic mapping
+                    const productId = await mapToProductIdDynamic(rec.offer, allProducts);
+                    const product = allProducts.find(p => p.id === productId);
 
-                try {
-                    const saveResponse = await axios.post(
-                        `${BACKEND1_URL}/api/recommendations`,
-                        {
-                            userId,
+                    console.log(`\n   Processing: ${rec.offer}`);
+                    console.log(`   → Mapped to: ${product?.name} (ID: ${productId})`);
+
+                    try {
+                        const saveResponse = await axios.post(
+                            `${BACKEND1_URL}/api/recommendations`,
+                            {
+                                userId,
+                                productId,
+                                score: rec.score / 100,
+                                reason: generateReason(rec.offer, customerData)
+                            },
+                            { timeout: 5000 }
+                        );
+
+                        console.log(`   ✅ Saved successfully`);
+                        savedResults.push({ 
+                            offer: rec.offer,
+                            mappedTo: product?.name,
                             productId,
-                            score: rec.score / 100,
-                            reason: generateReason(rec.offer, customerData)
-                        }
-                    );
+                            score: rec.score,
+                            saved: true 
+                        });
 
-                    savedResults.push({ offer: rec.offer, saved: true });
-
-                } catch (err) {
-                    savedResults.push({ offer: rec.offer, saved: false, error: err.message });
+                    } catch (err) {
+                        console.error(`   ❌ Save failed:`, err.message);
+                        savedResults.push({ 
+                            offer: rec.offer,
+                            mappedTo: product?.name,
+                            productId,
+                            score: rec.score,
+                            saved: false, 
+                            error: err.response?.data?.message || err.message 
+                        });
+                    }
                 }
-            }
 
-            res.json({
-                status: 'success',
-                message: 'Prediction completed and saved',
-                saved: savedResults
+                console.log(`\n${'='.repeat(60)}`);
+                console.log(`✅ COMPLETED: ${savedResults.filter(r => r.saved).length}/${savedResults.length} saved`);
+                console.log(`${'='.repeat(60)}\n`);
+
+                res.json({
+                    status: 'success',
+                    message: 'Prediction completed and saved',
+                    data: {
+                        totalPredictions: savedResults.length,
+                        successfullySaved: savedResults.filter(r => r.saved).length,
+                        results: savedResults
+                    }
+                });
+
+            } catch (parseError) {
+                console.error('❌ Failed to parse ML output:', parseError.message);
+                console.error('Raw output:', outputData);
+                res.status(500).json({
+                    status: 'error',
+                    message: 'Failed to process ML prediction',
+                    details: parseError.message
+                });
+            }
+        });
+
+        pyshell.on('error', (err) => {
+            console.error('❌ Python execution error:', err);
+            res.status(500).json({
+                status: 'error',
+                message: 'ML prediction failed',
+                details: err.message
             });
         });
 
     } catch (error) {
-        res.status(500).json({ status: 'error', message: error.message });
+        console.error('❌ Server error:', error);
+        res.status(500).json({ 
+            status: 'error', 
+            message: error.message 
+        });
     }
 });
 
@@ -287,8 +477,13 @@ app.post('/api/predict-save', async (req, res) => {
 app.get('/', (req, res) => {
     res.json({
         service: 'Telco ML Prediction Backend',
-        version: '1.0.0',
-        status: 'running'
+        version: '2.0.0 (FIXED)',
+        status: 'running',
+        features: [
+            'Dynamic product mapping',
+            'Improved offer matching',
+            'Detailed logging'
+        ]
     });
 });
 
@@ -309,5 +504,8 @@ app.use((req, res) => {
 // ============================================
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 ML Backend running on http://localhost:${PORT}`);
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`🚀 ML Backend (FIXED) running on http://localhost:${PORT}`);
+    console.log(`📡 Connected to Backend 1: ${BACKEND1_URL}`);
+    console.log(`${'='.repeat(60)}\n`);
 });
