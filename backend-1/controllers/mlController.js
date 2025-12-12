@@ -1,45 +1,46 @@
-// backend-1/controllers/mlController.js
-
 const axios = require('axios');
-// 1. TAMBAHKAN IMPORT INI:
-const { Recommendation } = require('../models'); 
+const { Recommendation, UserBehavior } = require('../models'); // <--- TAMBAH UserBehavior
 
 const ML_BACKEND_URL = process.env.ML_BACKEND_URL || 'http://localhost:5001';
 
 exports.generateRecommendation = async (req, res) => {
     try {
         const userId = req.user.id;
-        const customerData = req.body;
-
         console.log(`🤖 Generating ML prediction for userId: ${userId}`);
 
-        // 2. TAMBAHKAN KODE INI UNTUK MENGHAPUS REKOMENDASI LAMA:
-        // ============================================================
-        console.log(`🧹 Clearing old recommendations for user: ${userId}`);
-        await Recommendation.destroy({
-            where: { userId: userId }
-        });
-        // ============================================================
+        // 1. [BARU] Ambil Data Kebiasaan User dari Database
+        // Kita tidak lagi pakai req.body dari frontend!
+        const behavior = await UserBehavior.findOne({ where: { userId } });
 
-        // Validasi input
-        const requiredFields = [
-            'plan_type', 'device_brand', 'avg_data_usage_gb',
-            'pct_video_usage', 'avg_call_duration', 'sms_freq',
-            'monthly_spend', 'topup_freq', 'travel_score', 'complaint_count'
-        ];
-
-        const missingFields = requiredFields.filter(field => !(field in customerData));
-        
-        if (missingFields.length > 0) {
-            return res.status(400).json({
+        if (!behavior) {
+            return res.status(404).json({
                 status: 'error',
-                message: `Missing required fields: ${missingFields.join(', ')}`
+                message: 'Data penggunaan user tidak ditemukan. Silakan hubungi CS.'
             });
         }
 
-        // Panggil Backend 2 ML
-        console.log(`📡 Calling ML Backend at: ${ML_BACKEND_URL}/api/predict-save`);
+        // 2. Siapkan Data untuk dikirim ke Python ML
+        // Format JSON ini HARUS SAMA PERSIS dengan yang diminta predict.py
+        const customerData = {
+            plan_type: behavior.plan_type,
+            device_brand: behavior.device_brand,
+            avg_data_usage_gb: behavior.avg_data_usage_gb,
+            pct_video_usage: behavior.pct_video_usage,
+            avg_call_duration: behavior.avg_call_duration,
+            sms_freq: behavior.sms_freq,
+            monthly_spend: behavior.monthly_spend,
+            topup_freq: behavior.topup_freq,
+            travel_score: behavior.travel_score,
+            complaint_count: behavior.complaint_count
+        };
 
+        // 3. Hapus Rekomendasi Lama (Supaya tidak double)
+        console.log(`🧹 Clearing old recommendations...`);
+        await Recommendation.destroy({ where: { userId } });
+
+        // 4. Panggil Backend ML (Sama seperti sebelumnya)
+        console.log(`📡 Calling ML Backend with DB Data...`);
+        
         const mlResponse = await axios.post(
             `${ML_BACKEND_URL}/api/predict-save`,
             { userId, customerData },
@@ -49,20 +50,14 @@ exports.generateRecommendation = async (req, res) => {
             }
         );
 
-        console.log('✅ ML Response received:', mlResponse.data.status);
-
         if (mlResponse.data.status === 'success') {
             res.json({
                 status: 'success',
-                message: 'Recommendations generated and saved successfully',
+                message: 'Recommendations generated based on your usage history',
                 data: mlResponse.data.data
             });
         } else {
-            res.status(500).json({
-                status: 'error',
-                message: 'ML prediction failed',
-                details: mlResponse.data
-            });
+            throw new Error('ML prediction failed');
         }
 
     } catch (error) {
@@ -71,41 +66,23 @@ exports.generateRecommendation = async (req, res) => {
         if (error.code === 'ECONNREFUSED') {
             return res.status(503).json({
                 status: 'error',
-                message: 'ML service is not available',
-                hint: `Trying to connect to: ${ML_BACKEND_URL}`
-            });
-        }
-
-        if (error.response) {
-            return res.status(error.response.status).json({
-                status: 'error',
-                message: error.response.data.message || 'ML service error',
-                details: error.response.data
+                message: 'ML service is not available'
             });
         }
 
         res.status(500).json({
             status: 'error',
-            message: 'Failed to generate recommendations',
-            error: error.message
+            message: error.message
         });
     }
 };
 
+// ... (Function checkMLHealth biarkan saja, tidak perlu diubah)
 exports.checkMLHealth = async (req, res) => {
     try {
         const response = await axios.get(`${ML_BACKEND_URL}/health`, { timeout: 5000 });
-        
-        res.json({
-            status: 'success',
-            message: 'ML service is healthy',
-            mlService: response.data
-        });
+        res.json({ status: 'success', message: 'ML service is healthy' });
     } catch (error) {
-        res.status(503).json({
-            status: 'error',
-            message: 'ML service is not available',
-            error: error.message
-        });
+        res.status(503).json({ status: 'error', message: 'ML service is not available' });
     }
 };

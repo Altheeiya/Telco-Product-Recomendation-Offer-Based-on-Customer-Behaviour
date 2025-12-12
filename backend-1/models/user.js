@@ -21,6 +21,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
         as: 'recommendations'
       });
+
+      User.hasOne(models.UserBehavior, {
+        foreignKey: 'userId',
+        as: 'behavior',
+        onDelete: 'CASCADE' // Kalau user dihapus, datanya ikut terhapus
+      });
     }
   }
   User.init({
