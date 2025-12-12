@@ -36,17 +36,46 @@ const Dashboard = () => {
       console.log('🔄 Fetching recommendations from API...');
       
       const response = await getMyRecommendations();
-      console.log('📊 API Response:', response);
+      console.log('📊 Full API Response:', response);
+      
+      // Handle different response structures
+      let recommendationsData = [];
       
       if (response.status === 'success' && Array.isArray(response.data)) {
-        console.log('✅ Got', response.data.length, 'recommendations');
-        setRecommendations(response.data);
-      } else {
-        console.log('⚠️ No recommendations data');
-        setRecommendations([]);
+        recommendationsData = response.data;
+      } else if (Array.isArray(response)) {
+        recommendationsData = response;
+      } else if (response.recommendations && Array.isArray(response.recommendations)) {
+        recommendationsData = response.recommendations;
       }
+      
+      console.log('✅ Processed recommendations:', recommendationsData);
+      console.log('📦 Total recommendations:', recommendationsData.length);
+      
+      // Log each recommendation detail
+      recommendationsData.forEach((rec, idx) => {
+        console.log(`\n  Recommendation ${idx + 1}:`, {
+          id: rec.id,
+          productId: rec.productId,
+          productName: rec.product?.name,
+          score: rec.score,
+          reason: rec.reason
+        });
+      });
+      
+      setRecommendations(recommendationsData);
+      
+      if (recommendationsData.length === 0) {
+        console.log('⚠️ No recommendations found');
+      }
+      
     } catch (err) {
       console.error('❌ Fetch recommendations error:', err);
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
       setError(err.response?.data?.message || 'Failed to load recommendations');
       setRecommendations([]);
     } finally {
@@ -354,63 +383,82 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Display Recommendations */}
+        {/* Display Recommendations - FIXED VERSION */}
         {recommendations.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {recommendations.map((rec) => (
-              <div
-                key={rec.id}
-                className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden"
-              >
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-2xl font-bold text-gray-800 mb-1">
-                        {rec.product?.name || 'Product'}
-                      </h3>
-                      <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">
-                        {rec.product?.category || 'Unknown'}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <div className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-full">
-                        Match: {(rec.score * 100).toFixed(0)}%
+            {recommendations.map((rec) => {
+              // Safely extract product data
+              const product = rec.product || {};
+              const productName = product.name || 'Product';
+              const productCategory = product.category || 'Unknown';
+              const productPrice = product.price || 0;
+              const productValidity = product.validity_days || 0;
+              const productDescription = product.description || 'No description';
+              const productId = rec.productId || product.id || 0;
+              const score = rec.score || 0;
+              const reason = rec.reason || 'Based on your usage pattern';
+
+              console.log(`Rendering rec ${rec.id}:`, {
+                productName,
+                productId,
+                score
+              });
+
+              return (
+                <div
+                  key={rec.id}
+                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden"
+                >
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-800 mb-1">
+                          {productName}
+                        </h3>
+                        <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">
+                          {productCategory}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <div className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-full">
+                          Match: {(score * 100).toFixed(0)}%
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <p className="text-gray-600 mb-4">
-                    {rec.product?.description || 'No description'}
-                  </p>
-
-                  <div className="bg-red-50 rounded-lg p-4 mb-4">
-                    <p className="text-sm font-medium text-gray-700 mb-1">
-                      💡 Why this offer?
+                    <p className="text-gray-600 mb-4">
+                      {productDescription}
                     </p>
-                    <p className="text-sm text-gray-600">
-                      {rec.reason || 'Based on your usage pattern'}
-                    </p>
-                  </div>
 
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-3xl font-bold text-red-600">
-                        Rp {rec.product?.price?.toLocaleString('id-ID') || '0'}
+                    <div className="bg-red-50 rounded-lg p-4 mb-4">
+                      <p className="text-sm font-medium text-gray-700 mb-1">
+                        💡 Why this offer?
                       </p>
-                      <p className="text-sm text-gray-500">
-                        Valid for {rec.product?.validity_days || 0} days
+                      <p className="text-sm text-gray-600">
+                        {reason}
                       </p>
                     </div>
-                    <button 
-                      onClick={() => window.location.href = `/products/${rec.product?.id}`}
-                      className="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition"
-                    >
-                      View Details
-                    </button>
+
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-3xl font-bold text-red-600">
+                          Rp {productPrice.toLocaleString('id-ID')}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Valid for {productValidity} days
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => window.location.href = `/products/${productId}`}
+                        className="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition"
+                      >
+                        View Details
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center bg-white rounded-xl shadow-md p-12">
