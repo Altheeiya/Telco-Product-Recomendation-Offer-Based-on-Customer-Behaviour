@@ -56,7 +56,11 @@ exports.register = async (req, res) => {
             
             // Data Tampilan Dashboard
             balance: Math.floor(Math.random() * 50000), 
-            data_remaining_gb: parseFloat((Math.random() * 10).toFixed(1))
+            data_remaining_gb: parseFloat((Math.random() * 10).toFixed(1)),
+
+            // --- TAMBAHAN BARU ---
+            gaming_usage: parseFloat((Math.random() * 50).toFixed(1)), // 0-50 jam main game
+            roaming_usage: Math.random() < 0.2 // 20% user suka roaming
         });
 
         const token = signToken(newUser.id);

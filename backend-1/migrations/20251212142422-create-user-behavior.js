@@ -10,7 +10,14 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       userId: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        // Tambahkan references agar relasi ke tabel Users jelas (Opsional tapi Good Practice)
+        references: {
+          model: 'Users',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       plan_type: {
         type: Sequelize.STRING
@@ -48,6 +55,16 @@ module.exports = {
       data_remaining_gb: {
         type: Sequelize.FLOAT
       },
+      
+      // --- MULAI TAMBAHAN WAJIB DI SINI ---
+      gaming_usage: {
+        type: Sequelize.FLOAT
+      },
+      roaming_usage: {
+        type: Sequelize.BOOLEAN
+      },
+      // --- SELESAI TAMBAHAN ---
+
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE
