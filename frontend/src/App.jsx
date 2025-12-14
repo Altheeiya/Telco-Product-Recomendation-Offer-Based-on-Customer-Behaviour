@@ -8,7 +8,8 @@ import Login from './pages/Login';
 import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
 import CreateProduct from './pages/CreateProduct';
-import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
+import TransactionHistory from './pages/TransactionHistory';
 
 function App() {
   return (
@@ -44,10 +45,18 @@ function App() {
             } 
           />
           <Route 
-            path="/dashboard" 
+            path="/profile" 
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <Profile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/transactions" 
+            element={
+              <ProtectedRoute>
+                <TransactionHistory />
               </ProtectedRoute>
             } 
           />
