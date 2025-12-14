@@ -1,1 +1,27 @@
+# Dependencies
 node_modules/
+.venv/
+__pycache__/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Testing
+coverage/
+test-*.py
+test-*.json
+
+# Model files (jika terlalu besar untuk git)
+# models/*.pkl

@@ -1,25 +1,19 @@
-<<<<<<< Updated upstream
-import axios from "axios";
-import { getToken } from "../utils/auth";
-
-// Local
-const API_URL = "http://localhost:5000/api";
-
-// Production
-// const API_URL = "domain.com/api";
-=======
 import axios from 'axios';
 import { getToken } from '../utils/auth';
->>>>>>> Stashed changes
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+console.log('🔗 API URL:', API_URL);
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 40000,
 });
 
-// Request interceptor to add token
+// Request interceptor → inject token
 api.interceptors.request.use(
   (config) => {
     const token = getToken();
@@ -28,22 +22,16 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-<<<<<<< Updated upstream
-export default api;
-=======
-// Response interceptor for error handling
+// Response interceptor → handle auth error
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      console.error('❌ Unauthorized, redirecting to login');
+      localStorage.clear();
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -51,4 +39,3 @@ api.interceptors.response.use(
 );
 
 export default api;
->>>>>>> Stashed changes

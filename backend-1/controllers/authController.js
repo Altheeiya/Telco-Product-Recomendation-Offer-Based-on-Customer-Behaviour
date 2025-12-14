@@ -6,13 +6,14 @@ const { validationResult } = require('express-validator');
 const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_negara_api';
 
 const signToken = id => {
-    return jwt.sign({ id }, JWT_SECRET, {
-        expiresIn: '1d'
-    });
+    return jwt.sign({ id }, JWT_SECRET, { expiresIn: '1d' });
 };
 
-// 1. REGISTRASI USER BARU
+// =====================
+// 1. REGISTRASI USER
+// =====================
 exports.register = async (req, res) => {
+    // Cek error validasi
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -21,21 +22,25 @@ exports.register = async (req, res) => {
     const { username, email, password } = req.body;
 
     try {
+        // Cek email duplikat
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
             return res.status(400).json({ message: 'Email sudah digunakan' });
         }
 
+        // Hash password
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
 
+        // Buat user
         const newUser = await User.create({
             username,
             email,
             password_hash: passwordHash,
-            role: 'user' // Default role adalah user
+            role: 'user'
         });
 
+        // Buat data behavior dummy
         await UserBehavior.create({
             userId: newUser.id,
             plan_type: Math.random() > 0.5 ? 'Postpaid' : 'Prepaid',
@@ -48,7 +53,9 @@ exports.register = async (req, res) => {
             topup_freq: Math.floor(Math.random() * 5) + 1,
             travel_score: parseFloat(Math.random().toFixed(2)),
             complaint_count: Math.random() > 0.9 ? 1 : 0,
-            balance: Math.floor(Math.random() * 50000), 
+
+            // Data dashboard
+            balance: Math.floor(Math.random() * 50000),
             data_remaining_gb: parseFloat((Math.random() * 10).toFixed(1)),
             gaming_usage: parseFloat((Math.random() * 50).toFixed(1)),
             roaming_usage: Math.random() < 0.2
@@ -63,22 +70,24 @@ exports.register = async (req, res) => {
                 id: newUser.id,
                 username: newUser.username,
                 email: newUser.email,
-                role: newUser.role // Kirim role ke frontend
+                role: newUser.role
             }
         });
 
     } catch (error) {
-        console.error("Register Error:", error);
+        console.error('Register Error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
+// =====================
 // 2. LOGIN USER
+// =====================
 exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const user = await User.findOne({ 
+        const user = await User.findOne({
             where: { email },
             include: [{ model: UserBehavior, as: 'behavior' }]
         });
@@ -88,8 +97,8 @@ exports.login = async (req, res) => {
         }
 
         if (!user.password_hash) {
-            return res.status(400).json({ 
-                message: 'Akun ini rusak (password kosong). Silakan register ulang dengan email baru.' 
+            return res.status(400).json({
+                message: 'Akun ini rusak (password kosong). Silakan register ulang.'
             });
         }
 
@@ -102,18 +111,18 @@ exports.login = async (req, res) => {
 
         res.json({
             message: 'Login berhasil',
-            token: token,
+            token,
             user: {
                 id: user.id,
                 username: user.username,
                 email: user.email,
-                role: user.role, // Kirim role ke frontend
+                role: user.role,
                 behavior: user.behavior
             }
         });
 
     } catch (error) {
-        console.error("Login Error:", error);
+        console.error('Login Error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };

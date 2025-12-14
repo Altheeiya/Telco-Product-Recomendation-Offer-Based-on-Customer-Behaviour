@@ -15,13 +15,8 @@ import Login from './pages/Login';
 // User Pages
 import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
-<<<<<<< Updated upstream
-import CreateProduct from './pages/CreateProduct';
-import Dashboard from './pages/Dashboard';
-=======
 import Profile from './pages/Profile';
 import TransactionHistory from './pages/TransactionHistory';
->>>>>>> Stashed changes
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -36,162 +31,126 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-<<<<<<< Updated upstream
-          <Route path="/" element={<Home />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/login" element={<Login />} />
-          <Route 
-            path="/products" 
-            element={
-              <ProtectedRoute>
-                <Products />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/products/create" 
-            element={
-              <ProtectedRoute>
-                <CreateProduct />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/products/:id" 
-            element={
-              <ProtectedRoute>
-                <ProductDetail />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
-        </Routes>
-      </Layout>
-    </Router>
-=======
-            {/* Public Routes */}
+
+            {/* ================= PUBLIC ================= */}
             <Route path="/" element={<Home />} />
-            
-            {/* Redirect logged-in users from login/register */}
-            <Route 
-              path="/register" 
+
+            <Route
+              path="/login"
               element={
-                isAuthenticated() ? (
-                  <Navigate to={isAdmin() ? "/admin/dashboard" : "/products"} replace />
-                ) : (
-                  <Register />
-                )
-              } 
+                isAuthenticated()
+                  ? <Navigate to={isAdmin() ? '/admin/dashboard' : '/products'} replace />
+                  : <Login />
+              }
             />
-            <Route 
-              path="/login" 
+
+            <Route
+              path="/register"
               element={
-                isAuthenticated() ? (
-                  <Navigate to={isAdmin() ? "/admin/dashboard" : "/products"} replace />
-                ) : (
-                  <Login />
-                )
-              } 
+                isAuthenticated()
+                  ? <Navigate to={isAdmin() ? '/admin/dashboard' : '/products'} replace />
+                  : <Register />
+              }
             />
-            
-            {/* User Protected Routes - Block Admin from accessing these */}
-            <Route 
-              path="/products" 
+
+            {/* ================= USER ================= */}
+            <Route
+              path="/products"
               element={
                 <ProtectedRoute>
                   {isAdmin() ? <Navigate to="/admin/products" replace /> : <Products />}
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/products/:id" 
+
+            <Route
+              path="/products/:id"
               element={
                 <ProtectedRoute>
                   {isAdmin() ? <Navigate to="/admin/products" replace /> : <ProductDetail />}
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/profile" 
+
+            <Route
+              path="/profile"
               element={
                 <ProtectedRoute>
                   {isAdmin() ? <Navigate to="/admin/dashboard" replace /> : <Profile />}
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/transactions" 
+
+            <Route
+              path="/transactions"
               element={
                 <ProtectedRoute>
                   {isAdmin() ? <Navigate to="/admin/transactions" replace /> : <TransactionHistory />}
                 </ProtectedRoute>
-              } 
+              }
             />
-            
-            {/* Admin Protected Routes - Only Admin can access */}
-            <Route 
-              path="/admin/dashboard" 
+
+            {/* ================= ADMIN ================= */}
+            <Route
+              path="/admin/dashboard"
               element={
                 <AdminRoute>
                   <AdminDashboard />
                 </AdminRoute>
-              } 
+              }
             />
-            <Route 
-              path="/admin/users" 
+
+            <Route
+              path="/admin/users"
               element={
                 <AdminRoute>
                   <AdminUsers />
                 </AdminRoute>
-              } 
+              }
             />
-            <Route 
-              path="/admin/products" 
+
+            <Route
+              path="/admin/products"
               element={
                 <AdminRoute>
                   <AdminProducts />
                 </AdminRoute>
-              } 
+              }
             />
-            <Route 
-              path="/admin/products/create" 
+
+            <Route
+              path="/admin/products/create"
               element={
                 <AdminRoute>
                   <CreateProducts />
                 </AdminRoute>
-              } 
+              }
             />
-            <Route 
-              path="/admin/transactions" 
+
+            <Route
+              path="/admin/transactions"
               element={
                 <AdminRoute>
                   <AdminTransactions />
                 </AdminRoute>
-              } 
+              }
             />
 
-            {/* 404 - Redirect based on role */}
-            <Route 
-              path="*" 
+            {/* ================= FALLBACK ================= */}
+            <Route
+              path="*"
               element={
-                isAuthenticated() ? (
-                  isAdmin() ? <Navigate to="/admin/dashboard" replace /> : <Navigate to="/products" replace />
-                ) : (
-                  <Navigate to="/" replace />
-                )
-              } 
+                isAuthenticated()
+                  ? (isAdmin()
+                      ? <Navigate to="/admin/dashboard" replace />
+                      : <Navigate to="/products" replace />)
+                  : <Navigate to="/" replace />
+              }
             />
+
           </Routes>
         </Layout>
       </Router>
->>>>>>> Stashed changes
     </ErrorBoundary>
   );
 }
