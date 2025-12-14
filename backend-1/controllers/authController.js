@@ -1,17 +1,17 @@
-const { User, UserBehavior } = require('../models'); // Import UserBehavior juga
+const { User, UserBehavior } = require('../models');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs'); // Gunakan bcryptjs
+const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_negara_api';
 
 const signToken = id => {
-    return jwt.sign({ id }, JWT_SECRET, {
-        expiresIn: '1d'
-    });
+    return jwt.sign({ id }, JWT_SECRET, { expiresIn: '1d' });
 };
 
-// 1. REGISTRASI USER BARU
+// =====================
+// 1. REGISTRASI USER
+// =====================
 exports.register = async (req, res) => {
     // Cek error validasi
     const errors = validationResult(req);
@@ -28,19 +28,19 @@ exports.register = async (req, res) => {
             return res.status(400).json({ message: 'Email sudah digunakan' });
         }
 
-        // 1. Hash Password (INI YANG KEMARIN HILANG)
+        // Hash password
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
 
-        // 2. Buat User dengan password_hash yang benar
+        // Buat user
         const newUser = await User.create({
             username,
             email,
-            password_hash: passwordHash, // Simpan password yang sudah di-hash
+            password_hash: passwordHash,
             role: 'user'
         });
 
-        // 3. Buat Data Dummy Perilaku (Fitur Otomatis)
+        // Buat data behavior dummy
         await UserBehavior.create({
             userId: newUser.id,
             plan_type: Math.random() > 0.5 ? 'Postpaid' : 'Prepaid',
@@ -53,14 +53,12 @@ exports.register = async (req, res) => {
             topup_freq: Math.floor(Math.random() * 5) + 1,
             travel_score: parseFloat(Math.random().toFixed(2)),
             complaint_count: Math.random() > 0.9 ? 1 : 0,
-            
-            // Data Tampilan Dashboard
-            balance: Math.floor(Math.random() * 50000), 
-            data_remaining_gb: parseFloat((Math.random() * 10).toFixed(1)),
 
-            // --- TAMBAHAN BARU ---
-            gaming_usage: parseFloat((Math.random() * 50).toFixed(1)), // 0-50 jam main game
-            roaming_usage: Math.random() < 0.2 // 20% user suka roaming
+            // Data dashboard
+            balance: Math.floor(Math.random() * 50000),
+            data_remaining_gb: parseFloat((Math.random() * 10).toFixed(1)),
+            gaming_usage: parseFloat((Math.random() * 50).toFixed(1)),
+            roaming_usage: Math.random() < 0.2
         });
 
         const token = signToken(newUser.id);
@@ -68,38 +66,40 @@ exports.register = async (req, res) => {
         res.status(201).json({
             message: 'Registrasi berhasil',
             token,
-            data: {
+            user: {
                 id: newUser.id,
                 username: newUser.username,
-                email: newUser.email
+                email: newUser.email,
+                role: newUser.role
             }
         });
 
     } catch (error) {
-        console.error("Register Error:", error);
+        console.error('Register Error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
+// =====================
 // 2. LOGIN USER
+// =====================
 exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        // Cari user DAN sertakan data Behavior-nya
-        const user = await User.findOne({ 
+        const user = await User.findOne({
             where: { email },
-            include: [{ model: UserBehavior, as: 'behavior' }] // Penting untuk Dashboard!
+            include: [{ model: UserBehavior, as: 'behavior' }]
         });
 
         if (!user) {
             return res.status(400).json({ message: 'Email atau password salah' });
         }
 
-        // Cek kecocokan password dengan Hash di database
-        // Jika user lama password_hash-nya NULL, ini akan tetap error (harus register ulang)
         if (!user.password_hash) {
-            return res.status(400).json({ message: 'Akun ini rusak (password kosong). Silakan register ulang dengan email baru.' });
+            return res.status(400).json({
+                message: 'Akun ini rusak (password kosong). Silakan register ulang.'
+            });
         }
 
         const isMatch = await bcrypt.compare(password, user.password_hash);
@@ -111,18 +111,18 @@ exports.login = async (req, res) => {
 
         res.json({
             message: 'Login berhasil',
-            token: token,
+            token,
             user: {
                 id: user.id,
                 username: user.username,
                 email: user.email,
                 role: user.role,
-                behavior: user.behavior // Kirim data behavior ke Frontend
+                behavior: user.behavior
             }
         });
 
     } catch (error) {
-        console.error("Login Error:", error);
+        console.error('Login Error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };

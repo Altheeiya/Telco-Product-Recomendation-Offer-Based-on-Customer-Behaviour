@@ -24,4 +24,4 @@ test-*.py
 test-*.json
 
 # Model files (jika terlalu besar untuk git)
-# models/*.pkl  # Uncomment kalau file >100MB
+# models/*.pkl

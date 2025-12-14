@@ -1,27 +1,45 @@
 const jwt = require('jsonwebtoken');
 
-// Fungsi untuk memproteksi route
-module.exports = (req, res, next) => {
-    // 1. Ambil token dari Header (Format: "Bearer <token>")
+// ==============================
+// Middleware: Proteksi Route
+// ==============================
+const authenticateToken = (req, res, next) => {
+    // Ambil token dari Header: "Authorization: Bearer <token>"
     const authHeader = req.header('Authorization');
-    
+
     if (!authHeader) {
         return res.status(401).json({ message: 'Akses ditolak! Token tidak ditemukan.' });
     }
 
-    // Ambil tokennya saja (buang kata 'Bearer ')
     const token = authHeader.split(' ')[1];
 
     try {
-        // 2. Verifikasi Token
-        // Pastikan JWT_SECRET di .env sama dengan saat login
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'rahasia_negara_api');
-        
-        // 3. Simpan data user ke dalam request object agar bisa dipakai di Controller
-        req.user = decoded; 
-        
-        next(); // Lanjut ke controller
+        // Verifikasi token
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET || 'rahasia_negara_api'
+        );
+
+        // Simpan data user (id, role, dll) ke request
+        req.user = decoded;
+
+        next();
     } catch (error) {
-        res.status(401).json({ message: 'Token tidak valid.' });
+        return res.status(401).json({ message: 'Token tidak valid atau kadaluarsa.' });
     }
+};
+
+// ==============================
+// Middleware: Admin Only
+// ==============================
+const isAdmin = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        return next();
+    }
+    return res.status(403).json({ message: 'Akses khusus admin.' });
+};
+
+module.exports = {
+    authenticateToken,
+    isAdmin
 };

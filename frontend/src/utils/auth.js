@@ -39,3 +39,13 @@ export const logout = () => {
 export const isAuthenticated = () => {
   return !!getToken();
 };
+
+export const isAdmin = () => {
+  const user = getUser();
+  return user && user.role === 'admin';
+};
+
+export const isRegularUser = () => {
+  const user = getUser();
+  return user && user.role === 'user';
+};

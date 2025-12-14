@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
+const authMiddleware = require('../middleware/authMiddleware');
+const adminMiddleware = require('../middleware/adminMiddleware');
 
-// Siapapun boleh melihat daftar produk (Public)
+// Public routes
 router.get('/', productController.getAllProducts);
 router.get('/:id', productController.getProductById);
 
-// Untuk create, bisa diproteksi atau dibiarkan public dulu untuk testing
-router.post('/', productController.createProduct);
+// Admin only
+router.post('/', authMiddleware, adminMiddleware, productController.createProduct);
 
 module.exports = router;
