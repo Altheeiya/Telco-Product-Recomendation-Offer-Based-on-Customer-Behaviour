@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTelkomsel Dashboard Clone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        jet: '#18181B',      // Elemen Kuat
+                        emerald: '#059669',  // Aksen Utama
+                        silver: '#E2E8F0',   // Background Kartu
+                        purewhite: '#FFFFFF',// Background Utama
+                        darkgrey: '#334155', // Teks
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+
+<body class="bg-purewhite text-darkgrey font-sans flex flex-col min-h-screen">
+
+    <nav class="bg-jet text-white py-4 shadow-md z-50">
+        <div class="container mx-auto px-6 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 bg-emerald rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-signal text-white text-sm"></i>
+                </div>
+                <span class="font-bold text-xl tracking-tight">MyTelkomsel</span>
+            </div>
+
+            <div class="hidden md:flex space-x-8 text-sm font-medium text-gray-300">
+                <a href="#" class="hover:text-emerald transition">Beranda</a>
+                <a href="#" class="hover:text-emerald transition">Riwayat</a>
+                <a href="#" class="hover:text-emerald transition">Bantuan</a>
+                <a href="#" class="hover:text-emerald transition">Inbox</a>
+            </div>
+
+            <div class="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition">
+                <div class="text-right hidden sm:block">
+                    <p class="text-xs text-gray-400">Selamat datang,</p>
+                    <p class="text-sm font-semibold">Nuraila</p>
+                </div>
+                <div
+                    class="w-10 h-10 rounded-full bg-emerald flex items-center justify-center text-white font-bold border-2 border-gray-700">
+                    N
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="bg-jet pb-32 pt-10 rounded-b-[3rem] shadow-xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-emerald opacity-10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-white mb-1">Hi, aila! 👋</h1>
+                    <p class="text-gray-400">nuraila@gmail.com</p>
+                </div>
+                <span
+                    class="bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs font-bold px-4 py-2 rounded-lg uppercase tracking-wider">
+                    Postpaid
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 -mt-24 flex-grow mb-12">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+            <div
+                class="bg-silver p-6 rounded-2xl shadow-lg border border-white hover:shadow-xl transition transform hover:-translate-y-1">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-darkgrey text-sm font-semibold">Main Balance</span>
+                    <i class="fa-solid fa-wallet text-emerald bg-white p-2 rounded-full shadow-sm"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-jet mb-2">Rp 41.733</h2>
+                <p class="text-xs text-emerald font-medium">Active until 30 Dec</p>
+            </div>
+
+            <div
+                class="bg-silver p-6 rounded-2xl shadow-lg border border-white hover:shadow-xl transition transform hover:-translate-y-1">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-darkgrey text-sm font-semibold">Internet Data</span>
+                    <i class="fa-solid fa-globe text-emerald bg-white p-2 rounded-full shadow-sm"></i>
+                </div>
+                <div class="flex items-end space-x-2 mb-3">
+                    <h2 class="text-3xl font-bold text-jet">1</h2>
+                    <span class="text-lg font-medium text-darkgrey mb-1">GB</span>
+                </div>
+                <div class="w-full bg-gray-300 rounded-full h-2.5 mb-2">
+                    <div class="bg-emerald h-2.5 rounded-full" style="width: 20%"></div>
+                </div>
+                <p class="text-xs text-darkgrey text-right">Sisa 1 GB dari 5 GB</p>
+            </div>
+
+            <div
+                class="bg-silver p-6 rounded-2xl shadow-lg border border-white hover:shadow-xl transition transform hover:-translate-y-1">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-darkgrey text-sm font-semibold">Telco Points</span>
+                    <i class="fa-solid fa-crown text-emerald bg-white p-2 rounded-full shadow-sm"></i>
+                </div>
+                <div class="flex items-end space-x-2 mb-2">
+                    <h2 class="text-3xl font-bold text-jet">1,250</h2>
+                    <span class="text-lg font-medium text-darkgrey mb-1">pts</span>
+                </div>
+                <a href="#" class="text-emerald text-sm font-bold hover:underline flex items-center">
+                    Redeem Now <i class="fa-solid fa-arrow-right ml-2 text-xs"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-lg p-1 mb-8 border border-gray-100">
+            <div
+                class="bg-silver rounded-xl p-6 md:p-8 flex flex-col md:flex-row justify-between items-center relative overflow-hidden">
+                <div class="absolute -left-10 -bottom-10 w-32 h-32 bg-emerald opacity-5 rounded-full"></div>
+
+                <div class="relative z-10 mb-4 md:mb-0">
+                    <h3 class="text-xl font-bold text-jet mb-2 flex items-center">
+                        Special For You
+                        <span class="text-2xl ml-2">🎁</span>
+                    </h3>
+                    <p class="text-darkgrey opacity-80 max-w-md">
+                        Get personalized offers based on your usage history. Hemat hingga 50% hari ini.
+                    </p>
+                </div>
+                <button
+                    class="bg-emerald hover:bg-emerald/90 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition transform hover:scale-105 flex items-center">
+                    <i class="fa-solid fa-robot mr-2"></i> Check Special Offers
+                </button>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="text-xl font-bold text-jet mb-6 border-l-4 border-emerald pl-3">Recommended Products</h3>
+
+            <div class="space-y-4">
+                <div
+                    class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition flex flex-col md:flex-row justify-between items-center group">
+                    <div class="flex items-start space-x-4 w-full md:w-auto mb-4 md:mb-0">
+                        <div
+                            class="bg-red-50 text-red-500 w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-bolt text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span
+                                    class="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded">Data</span>
+                                <h4 class="text-lg font-bold text-jet group-hover:text-emerald transition">Data Booster
+                                </h4>
+                            </div>
+                            <p class="text-sm text-darkgrey opacity-70 mb-2">Kuota ekstra 5GB untuk internetan makin
+                                puas.</p>
+                            <div class="flex items-center text-xs text-emerald bg-emerald/10 px-2 py-1 rounded w-fit">
+                                <i class="fa-solid fa-lightbulb mr-2"></i>
+                                Penggunaan data Anda tinggi (>5GB/bulan).
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col items-end min-w-[120px]">
+                        <span class="text-lg font-bold text-emerald mb-2">Rp 25.000</span>
+                        <button
+                            class="bg-emerald text-white text-sm font-semibold py-2 px-6 rounded-lg hover:bg-emerald/90 transition w-full md:w-auto">
+                            Buy Now
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition flex flex-col md:flex-row justify-between items-center group">
+                    <div class="flex items-start space-x-4 w-full md:w-auto mb-4 md:mb-0">
+                        <div
+                            class="bg-blue-50 text-blue-500 w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-plane text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span
+                                    class="bg-blue-100 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded">Roaming</span>
+                                <h4 class="text-lg font-bold text-jet group-hover:text-emerald transition">Roaming Pass
+                                </h4>
+                            </div>
+                            <p class="text-sm text-darkgrey opacity-70">Tetap terkoneksi di luar negeri tanpa ganti
+                                kartu.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col items-end min-w-[120px]">
+                        <span class="text-lg font-bold text-emerald mb-2">Rp 100.000</span>
+                        <button
+                            class="bg-emerald text-white text-sm font-semibold py-2 px-6 rounded-lg hover:bg-emerald/90 transition w-full md:w-auto">
+                            Buy Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-jet text-white py-10 mt-auto">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row justify-between items-center border-b border-gray-700 pb-8 mb-8">
+                <div class="mb-6 md:mb-0 text-center md:text-left">
+                    <h2 class="text-2xl font-bold mb-2">MyTelkomsel</h2>
+                    <p class="text-gray-400 text-sm">One stop digital solution for your telco needs.</p>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="#"
+                        class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center hover:bg-emerald transition">
+                        <i class="fa-brands fa-facebook-f"></i>
+                    </a>
+                    <a href="#"
+                        class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center hover:bg-emerald transition">
+                        <i class="fa-brands fa-twitter"></i>
+                    </a>
+                    <a href="#"
+                        class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center hover:bg-emerald transition">
+                        <i class="fa-brands fa-instagram"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="flex flex-col md:flex-row justify-between text-sm text-gray-500 text-center md:text-left">
+                <p>&copy; 2023 MyTelkomsel Clone. All rights reserved.</p>
+                <div class="space-x-4 mt-4 md:mt-0">
+                    <a href="#" class="hover:text-emerald">Privacy Policy</a>
+                    <a href="#" class="hover:text-emerald">Terms of Service</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>
