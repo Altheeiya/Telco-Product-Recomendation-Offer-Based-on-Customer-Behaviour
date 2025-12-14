@@ -11,38 +11,54 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-red-600 text-white shadow-lg">
-      <div className="container mx-auto px-4 py-4">
+    <nav className="bg-jet text-white shadow-lg">
+      <div className="container mx-auto px-6 py-4">
         <div className="flex justify-between items-center">
-          <Link to="/" className="text-2xl font-bold hover:text-red-100 transition">
-            Telkom
+          <Link to="/" className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-emerald rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <span className="text-xl font-bold tracking-tight">Telco</span>
           </Link>
           
           <div className="flex gap-4 items-center">
             {isAuthenticated() ? (
               <>
-                <Link to="/products" className="hover:text-red-100 transition">
+                <Link to="/products" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
                   Products
                 </Link>
-                <Link to="/dashboard" className="hover:text-red-100 transition">
-                  Dashboard
+                <Link to="/transactions" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
+                  History
                 </Link>
-                <span className="text-sm">Hi, {user?.username}</span>
+                <Link to="/profile" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
+                  Profile
+                </Link>
+                <div className="flex items-center space-x-3">
+                  <Link to="/profile" className="text-right hidden sm:block hover:opacity-80 transition">
+                    <p className="text-xs text-gray-400">Welcome,</p>
+                    <p className="text-sm font-semibold">{user?.username}</p>
+                  </Link>
+                  <Link to="/profile" className="w-10 h-10 rounded-full bg-emerald flex items-center justify-center text-white font-bold border-2 border-gray-700 hover:border-emerald transition">
+                    {user?.username?.charAt(0).toUpperCase()}
+                  </Link>
+                </div>
                 <button
                   onClick={handleLogout}
-                  className="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 transition"
+                  className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition text-sm"
                 >
                   Logout
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="hover:text-red-100 transition">
+                <Link to="/login" className="text-sm font-medium text-gray-300 hover:text-emerald transition">
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 transition"
+                  className="bg-emerald text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition text-sm font-semibold"
                 >
                   Register
                 </Link>
