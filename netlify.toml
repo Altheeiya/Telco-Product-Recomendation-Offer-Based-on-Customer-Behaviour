@@ -1,0 +1,15 @@
+[build]
+  # Masuk ke folder frontend dulu
+  base = "frontend"
+  
+  # Jalankan perintah build di dalam folder frontend
+  command = "npm run build"
+  
+  # Folder hasil build (relative terhadap folder frontend)
+  publish = "dist"
+
+# Aturan Redirect (Penting untuk React SPA agar tidak 404 saat refresh)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
