@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+// Hapus useNavigate karena kita akan pakai window.location agar Navbar ter-refresh
+import { Link } from 'react-router-dom'; 
 import { login } from '../services/authService';
 import { setToken, setUser } from '../utils/auth';
 
 const Login = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // Tidak perlu lagi untuk redirect login
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -36,12 +38,15 @@ const Login = () => {
       if (data.user) {
         setUser(data.user);
         
-        // Redirect based on role
+        // ✅ PERBAIKAN DISINI:
+        // Gunakan window.location.href agar halaman refresh total.
+        // Ini memaksa Navbar untuk membaca ulang localStorage dan mengubah tampilannya.
         if (data.user.role === 'admin') {
-          navigate('/admin/dashboard');
+          window.location.href = '/admin/dashboard';
         } else {
-          navigate('dashboard');
+          window.location.href = '/dashboard'; // Pastikan pakai tanda '/' di depan
         }
+
       } else {
         throw new Error('User data not found');
       }
