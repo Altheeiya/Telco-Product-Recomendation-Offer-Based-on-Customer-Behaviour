@@ -49,6 +49,9 @@ const Navbar = () => {
                 ) : (
                   /* ===== USER MENU ===== */
                   <>
+                    <Link to="/dashboard" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
+                      Home
+                    </Link>
                     <Link to="/products" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
                       Products
                     </Link>

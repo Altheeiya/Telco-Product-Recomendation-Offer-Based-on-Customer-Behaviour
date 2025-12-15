@@ -5,7 +5,7 @@ const { validationResult } = require('express-validator');
 const axios = require('axios');
 
 const ML_BACKEND_URL = process.env.ML_BACKEND_URL || 'http://localhost:5001';
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key'; 
+const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_negara_api_super_secret_2024'; 
 
 const signToken = (id, role) => {
     return jwt.sign({ id, role }, JWT_SECRET, { expiresIn: '1d' });
@@ -156,6 +156,7 @@ exports.login = async (req, res) => {
 
         const token = signToken(user.id, user.role);
 
+        // ⭐ PASTIKAN RESPONSE INI LENGKAP
         res.json({
             message: 'Login berhasil',
             token,
@@ -163,7 +164,7 @@ exports.login = async (req, res) => {
                 id: user.id,
                 username: user.username,
                 email: user.email,
-                role: user.role,
+                role: user.role,  // ⚠️ INI PENTING!
                 behavior: user.behavior
             }
         });

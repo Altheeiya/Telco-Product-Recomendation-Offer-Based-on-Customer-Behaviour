@@ -58,7 +58,6 @@ exports.getSalesChart = async (req, res) => {
   try {
     const { period = 'month' } = req.query;
     
-    // Untuk MySQL, kita gunakan approach yang berbeda
     let dateFormat;
     let interval;
     
@@ -95,30 +94,26 @@ exports.getSalesChart = async (req, res) => {
 // ==================== TOP PRODUCTS ====================
 exports.getTopProducts = async (req, res) => {
   try {
-    const topProducts = await Product.findAll({
-      include: [{
-        model: Transaction,
-        as: 'transactions',
-        attributes: []
-      }],
-      attributes: [
-        'id',
-        'name',
-        [Transaction.sequelize.fn('COUNT', Transaction.sequelize.col('transactions.id')), 'sales'],
-        [Transaction.sequelize.fn('COALESCE', 
-          Transaction.sequelize.fn('SUM', Transaction.sequelize.col('transactions.amount')), 
-          0), 'revenue']
-      ],
-      group: ['Product.id'],
-      order: [[Transaction.sequelize.literal('sales'), 'DESC']],
-      limit: 5
+    const topProducts = await Transaction.sequelize.query(`
+      SELECT 
+        p.id,
+        p.name,
+        COUNT(t.id) as sales,
+        COALESCE(SUM(t.amount), 0) as revenue
+      FROM Products p
+      LEFT JOIN Transactions t ON p.id = t.productId
+      GROUP BY p.id, p.name
+      ORDER BY sales DESC
+      LIMIT 5
+    `, {
+      type: Transaction.sequelize.QueryTypes.SELECT
     });
     
     const formatted = topProducts.map(p => ({
       id: p.id,
       name: p.name,
-      sales: parseInt(p.get('sales')) || 0,
-      revenue: parseFloat(p.get('revenue')) || 0
+      sales: parseInt(p.sales) || 0,
+      revenue: parseFloat(p.revenue) || 0
     }));
     
     res.json(formatted);
@@ -169,26 +164,22 @@ exports.getRecentTransactions = async (req, res) => {
 // ==================== GET ALL USERS ====================
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.findAll({
-      where: { role: 'user' },
-      include: [{
-        model: Transaction,
-        as: 'transactions',
-        attributes: []
-      }],
-      attributes: [
-        'id',
-        'username',
-        'email',
-        'role',
-        'createdAt',
-        [Transaction.sequelize.fn('COUNT', Transaction.sequelize.col('transactions.id')), 'total_transactions'],
-        [Transaction.sequelize.fn('COALESCE',
-          Transaction.sequelize.fn('SUM', Transaction.sequelize.col('transactions.amount')),
-          0), 'total_spent']
-      ],
-      group: ['User.id'],
-      order: [['createdAt', 'DESC']]
+    const users = await User.sequelize.query(`
+      SELECT 
+        u.id,
+        u.username,
+        u.email,
+        u.role,
+        u.createdAt as created_at,
+        COUNT(t.id) as total_transactions,
+        COALESCE(SUM(t.amount), 0) as total_spent
+      FROM Users u
+      LEFT JOIN Transactions t ON u.id = t.userId
+      WHERE u.role = 'user'
+      GROUP BY u.id, u.username, u.email, u.role, u.createdAt
+      ORDER BY u.createdAt DESC
+    `, {
+      type: User.sequelize.QueryTypes.SELECT
     });
     
     const formatted = users.map(u => ({
@@ -196,9 +187,9 @@ exports.getAllUsers = async (req, res) => {
       username: u.username,
       email: u.email,
       role: u.role,
-      created_at: u.createdAt,
-      total_transactions: parseInt(u.get('total_transactions')) || 0,
-      total_spent: parseFloat(u.get('total_spent')) || 0
+      created_at: u.created_at,
+      total_transactions: parseInt(u.total_transactions) || 0,
+      total_spent: parseFloat(u.total_spent) || 0
     }));
     
     res.json(formatted);

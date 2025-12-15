@@ -13,6 +13,7 @@ import Register from './pages/Register';
 import Login from './pages/Login';
 
 // User Pages
+import Dashboard from './pages/Dashboard'; // ⭐ TAMBAHKAN INI
 import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
 import Profile from './pages/Profile';
@@ -39,7 +40,7 @@ function App() {
               path="/login"
               element={
                 isAuthenticated()
-                  ? <Navigate to={isAdmin() ? '/admin/dashboard' : '/products'} replace />
+                  ? <Navigate to={isAdmin() ? '/admin/dashboard' : '/dashboard'} replace />
                   : <Login />
               }
             />
@@ -48,12 +49,22 @@ function App() {
               path="/register"
               element={
                 isAuthenticated()
-                  ? <Navigate to={isAdmin() ? '/admin/dashboard' : '/products'} replace />
+                  ? <Navigate to={isAdmin() ? '/admin/dashboard' : '/dashboard'} replace />
                   : <Register />
               }
             />
 
             {/* ================= USER ================= */}
+            {/* ⭐ ROUTE BARU: Dashboard User */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  {isAdmin() ? <Navigate to="/admin/dashboard" replace /> : <Dashboard />}
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/products"
               element={
@@ -143,7 +154,7 @@ function App() {
                 isAuthenticated()
                   ? (isAdmin()
                       ? <Navigate to="/admin/dashboard" replace />
-                      : <Navigate to="/products" replace />)
+                      : <Navigate to="/dashboard" replace />)
                   : <Navigate to="/" replace />
               }
             />

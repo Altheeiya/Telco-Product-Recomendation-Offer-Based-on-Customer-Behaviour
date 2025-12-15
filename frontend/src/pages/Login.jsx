@@ -26,34 +26,33 @@ const Login = () => {
 
     try {
       const data = await login(formData);
-      console.log('Login response:', data);
       
+      // Simpan token
       if (data.token) {
         setToken(data.token);
       }
       
-      // Ambil user data
-      const userData = data.user || {};
+      // Simpan user data
       if (data.user) {
         setUser(data.user);
-      }
-
-      // === PERBAIKAN DI SINI ===
-      // Jangan navigate('/'), tapi cek role-nya
-      if (userData.role === 'admin') {
-        navigate('/admin/dashboard');
+        
+        // Redirect based on role
+        if (data.user.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('dashboard');
+        }
       } else {
-        navigate('/products');
+        throw new Error('User data not found');
       }
-      // =========================
 
     } catch (err) {
-      console.error(err); // Debugging
+      console.error('Login error:', err);
       setError(err.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
-};
+  };
 
   return (
     <div className="min-h-screen bg-purewhite flex items-center justify-center px-4 py-12">
