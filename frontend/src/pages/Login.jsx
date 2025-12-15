@@ -42,9 +42,9 @@ const Login = () => {
         // Gunakan window.location.href agar halaman refresh total.
         // Ini memaksa Navbar untuk membaca ulang localStorage dan mengubah tampilannya.
         if (data.user.role === 'admin') {
-          window.location.href = '/admin/dashboard';
+          window.location.href = '/#/admin/dashboard';
         } else {
-          window.location.href = '/dashboard'; // Pastikan pakai tanda '/' di depan
+          window.location.href = '/#/dashboard'; // Pastikan pakai tanda '/' di depan
         }
 
       } else {
