@@ -1,115 +1,108 @@
-const { Transaction, Product, User, UserBehavior, Recommendation } = require('../models');
+const { User, UserBehavior, Recommendation } = require('../models');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const { validationResult } = require('express-validator');
 const axios = require('axios');
 
 const ML_BACKEND_URL = process.env.ML_BACKEND_URL || 'http://localhost:5001';
+const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_negara_api_super_secret_2024'; 
 
-// CREATE: User Membeli Paket
-exports.createTransaction = async (req, res) => {
+const signToken = (id, role) => {
+    return jwt.sign({ id, role }, JWT_SECRET, { expiresIn: '1d' });
+};
+
+// =====================
+// 1. REGISTER USER
+// =====================
+exports.register = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { username, email, password } = req.body;
+
     try {
-        const userId = req.user.id; 
-        const { productId } = req.body;
-
-        // 1. Cek apakah produk valid
-        const product = await Product.findByPk(productId);
-        if (!product) {
-            return res.status(404).json({ message: 'Produk tidak ditemukan' });
+        const existingUser = await User.findOne({ where: { email } });
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email sudah digunakan' });
         }
 
-        // 2. Simpan Transaksi
-        const newTransaction = await Transaction.create({
-            userId: userId,
-            productId: productId,
-            amount: product.price,
-            transaction_date: new Date()
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+
+        const newUser = await User.create({
+            username,
+            email,
+            password_hash: passwordHash,
+            role: 'user'
         });
 
-        // ⭐ 3. UPDATE USER BEHAVIOR
-        const behavior = await UserBehavior.findOne({ where: { userId } });
-        
-        if (behavior) {
-            // A. Update monthly_spend (tambah harga produk)
-            const currentSpend = parseFloat(behavior.monthly_spend || 0);
-            const newMonthlySpend = currentSpend + parseFloat(product.price);
+        // Buat data behavior
+        // DATA HISTORIS (Random) - Simulasi kebiasaan dari provider lama
+        // DATA REAL-TIME (Reset) - Mulai dari nol di aplikasi ini
+        const behavior = await UserBehavior.create({
+            userId: newUser.id,
+            plan_type: Math.random() > 0.5 ? 'Postpaid' : 'Prepaid',
+            device_brand: ['Samsung', 'Xiaomi', 'Oppo', 'Vivo', 'iPhone'][Math.floor(Math.random() * 5)],
             
-            // B. Update topup_freq (increment setiap pembelian)
-            const newTopupFreq = parseInt(behavior.topup_freq || 0) + 1;
-            
-            // C. Update avg_data_usage_gb (rata-rata penggunaan, bukan total)
-            // Logika: (current_avg * topup_count + new_gb) / (topup_count + 1)
-            let newDataUsage = parseFloat(behavior.avg_data_usage_gb || 0);
-            const gbMatch = product.name.match(/(\d+)\s*GB/i);
-            if (gbMatch) {
-                const addedGB = parseInt(gbMatch[1]);
-                const currentTopups = parseInt(behavior.topup_freq || 0);
-                newDataUsage = ((newDataUsage * currentTopups) + addedGB) / (currentTopups + 1);
-            }
-            
-            // D. Update balance (pulsa berkurang saat beli)
-            const currentBalance = parseFloat(behavior.balance || 0);
-            const newBalance = Math.max(0, currentBalance - parseFloat(product.price));
-            
-            // E. Update data_remaining_gb (KUOTA BERTAMBAH langsung)
-            let newDataRemaining = parseFloat(behavior.data_remaining_gb || 0);
-            if (gbMatch) {
-                const addedGB = parseInt(gbMatch[1]);
-                newDataRemaining = newDataRemaining + addedGB; // ✅ TAMBAH langsung
-            }
-            
-            await behavior.update({
-                monthly_spend: newMonthlySpend,
-                topup_freq: newTopupFreq,
-                avg_data_usage_gb: parseFloat(newDataUsage.toFixed(1)),
-                balance: newBalance,
-                data_remaining_gb: parseFloat(newDataRemaining.toFixed(1))
-            });
+            // Histori pemakaian (tetap di-generate agar ML punya data awal)
+            avg_data_usage_gb: parseFloat((Math.random() * 20).toFixed(1)), 
+            pct_video_usage: parseFloat(Math.random().toFixed(2)),
+            avg_call_duration: parseFloat((Math.random() * 100).toFixed(1)),
+            sms_freq: Math.floor(Math.random() * 20),
+            gaming_usage: parseFloat((Math.random() * 20).toFixed(1)),
+            travel_score: parseFloat(Math.random().toFixed(2)),
+            complaint_count: 0, 
 
-            console.log(`✅ Updated behavior for user ${userId}:`, {
-                monthly_spend: newMonthlySpend,
-                topup_freq: newTopupFreq,
-                avg_data_usage_gb: newDataUsage.toFixed(1),
-                data_remaining_gb: newDataRemaining.toFixed(1)
-            });
+            // State User Baru (Bersih)
+            monthly_spend: 0,      // Belum belanja
+            topup_freq: 0,         // Belum topup
+            balance: 100000,       // MODAL AWAL 100rb (Supaya bisa tes beli paket)
+            data_remaining_gb: 0,  // Belum punya kuota
+            roaming_usage: false
+        });
 
-            // ⭐ 4. TRIGGER AI REGENERATION (Background)
-            triggerMLRegeneration(userId, behavior);
-        }
+        // ⭐ TRIGGER ML GENERATION (Akan menghasilkan rekomendasi default/cold-start)
+        triggerMLGeneration(newUser.id, behavior);
+
+        const token = signToken(newUser.id, newUser.role);
 
         res.status(201).json({
-            status: 'success',
-            message: 'Pembelian berhasil! AI sedang memperbarui rekomendasi Anda...',
-            data: newTransaction
+            message: 'Registrasi berhasil',
+            token,
+            user: {
+                id: newUser.id,
+                username: newUser.username,
+                email: newUser.email,
+                role: newUser.role
+            }
         });
 
     } catch (error) {
-        console.error('Transaction error:', error);
-        res.status(500).json({ message: error.message });
+        console.error('Register Error:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
-// ⭐ FUNGSI BACKGROUND: Regenerate ML Recommendations
-async function triggerMLRegeneration(userId, behavior) {
+// ⭐ FUNGSI: Trigger ML & Save to DB
+async function triggerMLGeneration(userId, behavior) {
     try {
-        console.log(`🤖 [Background] Regenerating ML for user ${userId}`);
-        
-        // Refresh data behavior terbaru dari DB
-        const latestBehavior = await UserBehavior.findOne({ where: { userId } });
+        console.log(`🤖 [Background] Starting ML generation for user ${userId}`);
         
         const customerData = {
-            plan_type: latestBehavior.plan_type,
-            device_brand: latestBehavior.device_brand,
-            avg_data_usage_gb: latestBehavior.avg_data_usage_gb,
-            pct_video_usage: latestBehavior.pct_video_usage,
-            avg_call_duration: latestBehavior.avg_call_duration,
-            sms_freq: latestBehavior.sms_freq,
-            monthly_spend: latestBehavior.monthly_spend,
-            topup_freq: latestBehavior.topup_freq,
-            travel_score: latestBehavior.travel_score,
-            complaint_count: latestBehavior.complaint_count
+            plan_type: behavior.plan_type,
+            device_brand: behavior.device_brand,
+            avg_data_usage_gb: behavior.avg_data_usage_gb,
+            pct_video_usage: behavior.pct_video_usage,
+            avg_call_duration: behavior.avg_call_duration,
+            sms_freq: behavior.sms_freq,
+            monthly_spend: behavior.monthly_spend,
+            topup_freq: behavior.topup_freq,
+            travel_score: behavior.travel_score,
+            complaint_count: behavior.complaint_count
         };
 
-        console.log(`📊 Sending to ML:`, customerData);
-
-        // Panggil Backend-2 ML
         const mlResponse = await axios.post(
             `${ML_BACKEND_URL}/api/predict`,
             customerData,
@@ -119,49 +112,68 @@ async function triggerMLRegeneration(userId, behavior) {
         if (mlResponse.data.status === 'success') {
             const resultData = mlResponse.data.data;
             
-            console.log(`🎯 ML Response:`, resultData.prediction);
-            
-            // Hapus rekomendasi lama
-            await Recommendation.destroy({ where: { userId } });
-            
-            // Simpan rekomendasi baru
             if (resultData.prediction && resultData.prediction.recommendations) {
-                const recsToSave = resultData.prediction.recommendations.map(rec => ({
+                 const recsToSave = resultData.prediction.recommendations.map(rec => ({
                     userId: userId,
                     productId: rec.productId,
-                    score: rec.score || 0.95,
-                    reason: rec.reason || "AI-powered recommendation"
+                    score: rec.score,
+                    reason: rec.reason
                 }));
 
                 if (recsToSave.length > 0) {
                     await Recommendation.bulkCreate(recsToSave);
-                    console.log(`✅ Saved ${recsToSave.length} recommendations for user ${userId}`);
+                    console.log(`✅ [Background] Saved ${recsToSave.length} ML recommendations for user ${userId}`);
                 }
             }
         }
     } catch (error) {
-        console.error(`❌ ML regeneration failed for user ${userId}:`, error.message);
+        console.error(`❌ [Background] ML generation failed for user ${userId}:`, error.message);
     }
 }
 
-// READ: Lihat Riwayat Transaksi User yang Login
-exports.getMyTransactions = async (req, res) => {
-    try {
-        const userId = req.user.id;
+// =====================
+// 2. LOGIN USER
+// =====================
+exports.login = async (req, res) => {
+    const { email, password } = req.body;
 
-        const transactions = await Transaction.findAll({
-            where: { userId: userId },
-            include: [
-                { model: Product, as: 'product' }
-            ],
-            order: [['createdAt', 'DESC']]
+    try {
+        const user = await User.findOne({
+            where: { email },
+            include: [{ model: UserBehavior, as: 'behavior' }]
         });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Email atau password salah' });
+        }
+
+        if (!user.password_hash) {
+            return res.status(400).json({
+                message: 'Akun ini rusak (password kosong). Silakan register ulang.'
+            });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Email atau password salah' });
+        }
+
+        const token = signToken(user.id, user.role);
 
         res.json({
-            status: 'success',
-            data: transactions
+            message: 'Login berhasil',
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                behavior: user.behavior
+            }
         });
+
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Login Error:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };

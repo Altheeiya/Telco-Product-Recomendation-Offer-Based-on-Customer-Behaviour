@@ -37,10 +37,10 @@ const Dashboard = () => {
     return new Intl.NumberFormat('id-ID').format(amount || 0);
   };
 
-  // Helper: Calculate data usage percentage
+  // Helper: Calculate data usage percentage (Visual Bar)
   const getDataPercentage = () => {
     if (!userProfile) return 0;
-    const total = 50; // Assume max 50GB display
+    const total = 50; // Asumsi visual max 50GB
     const remaining = userProfile.data_remaining_gb || 0;
     return Math.min(100, (remaining / total) * 100);
   };
@@ -58,16 +58,13 @@ const Dashboard = () => {
     return Math.floor((userProfile.monthly_spend || 0) / 10000);
   };
 
-  // Helper: Get badge level based on monthly_spend (EXACT RULES)
+  // Helper: Get badge level based on monthly_spend
   const getBadgeLevel = () => {
     if (!userProfile) return 'Bronze';
     const spend = userProfile.monthly_spend || 0;
     
-    // Gold: > 150k
     if (spend > 150000) return 'Gold';
-    // Silver: > 50k tapi <= 150k
     if (spend > 50000) return 'Silver';
-    // Bronze: <= 50k
     return 'Bronze';
   };
 
@@ -99,7 +96,7 @@ const Dashboard = () => {
 
       <main className="container mx-auto px-6 -mt-24 flex-grow mb-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Main Balance = PULSA */}
+          {/* 1. PULSA (Sebelumnya Main Balance) */}
           <div className="bg-silver p-6 rounded-2xl shadow-lg border border-white hover:shadow-xl transition transform hover:-translate-y-1">
             <div className="flex justify-between items-center mb-4">
               <span className="text-darkgrey text-sm font-semibold">Pulsa</span>
@@ -124,7 +121,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Internet Data - FIXED CALCULATION */}
+          {/* 2. KUOTA INTERNET */}
           <div className="bg-silver p-6 rounded-2xl shadow-lg border border-white hover:shadow-xl transition transform hover:-translate-y-1">
             <div className="flex justify-between items-center mb-4">
               <span className="text-darkgrey text-sm font-semibold">Kuota Internet</span>
@@ -155,13 +152,13 @@ const Dashboard = () => {
                   ></div>
                 </div>
                 <p className="text-xs text-darkgrey text-right">
-                  Tersisa {userProfile?.data_remaining_gb?.toFixed(1) || 0} GB
+                  Total Aktif: {userProfile?.data_remaining_gb?.toFixed(1) || 0} GB
                 </p>
               </>
             )}
           </div>
 
-          {/* Telco Points - FIXED: 1 point per 10k */}
+          {/* 3. TELCO POINTS */}
           <div className="bg-silver p-6 rounded-2xl shadow-lg border border-white hover:shadow-xl transition transform hover:-translate-y-1">
             <div className="flex justify-between items-center mb-4">
               <span className="text-darkgrey text-sm font-semibold">Telco Points</span>
@@ -190,7 +187,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Special For You Banner - FIXED SPENDING DISPLAY */}
+        {/* 4. SPECIAL FOR YOU BANNER */}
         <div className="bg-white rounded-2xl shadow-lg p-1 mb-8 border border-gray-100">
           <div className="bg-silver rounded-xl p-6 md:p-8 flex flex-col md:flex-row justify-between items-center relative overflow-hidden">
             <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-emerald opacity-5 rounded-full"></div>
@@ -201,14 +198,14 @@ const Dashboard = () => {
                 <span className="text-2xl ml-2">🎁</span>
               </h3>
               <p className="text-darkgrey opacity-80 max-w-md">
-                {userProfile?.monthly_spend > 0 ? (
+                {(userProfile?.monthly_spend || 0) > 0 ? (
                   <>
                     AI menyesuaikan rekomendasi berdasarkan pengeluaran Anda sebesar{' '}
                     <span className="font-bold text-emerald">Rp {formatRupiah(userProfile.monthly_spend)}</span>. 
                     Hemat hingga 50% hari ini!
                   </>
                 ) : (
-                  'Dapatkan penawaran yang dipersonalisasi berdasarkan riwayat penggunaan Anda.'
+                  'Halo Member Baru! Mulai transaksi pertama Anda untuk mengaktifkan Personal AI Assistant.'
                 )}
               </p>
             </div>
@@ -219,7 +216,7 @@ const Dashboard = () => {
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
-              Cek Penawaran AI
+              {userProfile?.monthly_spend > 0 ? 'Cek Penawaran AI' : 'Mulai Belanja'}
             </Link>
           </div>
         </div>
