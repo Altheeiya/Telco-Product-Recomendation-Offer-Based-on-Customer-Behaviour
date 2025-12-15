@@ -9,6 +9,7 @@ const transactionRoutes = require('./routes/transactionRoutes');
 const recommendationRoutes = require('./routes/recommendationRoutes');
 const mlRoutes = require('./routes/mlRoutes'); 
 const userRoutes = require('./routes/userRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -46,6 +47,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/ml', mlRoutes);
 app.use('/api/users', userRoutes); 
+app.use('/api/admin', adminRoutes);
 
 // Jalankan Server & Cek Koneksi DB
 app.listen(PORT, async () => {

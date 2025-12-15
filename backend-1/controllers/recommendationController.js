@@ -67,6 +67,90 @@ exports.generateRecommendation = async (req, res) => {
     }
 };
 
+// Tambahkan function baru di bawah generateRecommendation
+exports.checkAndGenerateIfEmpty = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Cek apakah sudah ada recommendations
+        const existing = await Recommendation.findAll({
+            where: { userId },
+            include: [{ model: Product, as: 'product' }]
+        });
+
+        // Jika ada, return langsung
+        if (existing.length > 0) {
+            return res.json({
+                status: 'success',
+                hasRecommendations: true,
+                data: existing
+            });
+        }
+
+        // Jika kosong, trigger ML generation
+        console.log(`🤖 Generating ML recommendations for user ${userId}`);
+
+        const behavior = await UserBehavior.findOne({ where: { userId } });
+        
+        if (!behavior) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'User behavior data not found'
+            });
+        }
+
+        const mlPayload = {
+            avg_data_usage: behavior.avg_data_usage_gb,
+            topup_freq: behavior.topup_freq,
+            monthly_spend: behavior.monthly_spend,
+            roaming_usage: behavior.roaming_usage ? 1 : 0,
+            streaming_usage: behavior.pct_video_usage,
+            gaming_usage: behavior.gaming_usage
+        };
+
+        const ML_URL = 'https://telco-ml-engine-production.up.railway.app/predict';
+        
+        let recommendedProductIds = [];
+
+        try {
+            const response = await axios.post(ML_URL, mlPayload, { timeout: 25000 });
+            recommendedProductIds = response.data.recommendations;
+        } catch (mlError) {
+            console.error("ML Service Error:", mlError.message);
+            recommendedProductIds = [1, 2]; // Fallback
+        }
+
+        // Simpan ke database
+        for (const productId of recommendedProductIds.slice(0, 3)) {
+            await Recommendation.create({
+                userId,
+                productId,
+                score: 0.95,
+                reason: "AI-powered recommendation"
+            });
+        }
+
+        // Fetch yang baru disimpan
+        const newRecommendations = await Recommendation.findAll({
+            where: { userId },
+            include: [{ model: Product, as: 'product' }]
+        });
+
+        res.json({
+            status: 'success',
+            hasRecommendations: true,
+            justGenerated: true,
+            data: newRecommendations
+        });
+
+    } catch (error) {
+        console.error('Error in checkAndGenerateIfEmpty:', error);
+        res.status(500).json({ 
+            status: 'error',
+            message: error.message 
+        });
+    }
+};
 // 2. API GET MY RECOMMENDATIONS (Fitur Lama: Restore)
 // Fungsi ini WAJIB ADA karena dipanggil oleh routes.js di baris 10
 exports.getMyRecommendations = async (req, res) => {
