@@ -6,6 +6,12 @@ export const getUserRecommendations = async () => {
 };
 
 export const generateRecommendation = async () => {
-  const response = await api.post("/ml/generate-recommendation");
+  const response = await api.post("/recommendations/generate");
+  return response.data;
+};
+
+// ⭐ FUNGSI BARU
+export const checkAndGenerateRecommendations = async () => {
+  const response = await api.get("/recommendations/check-and-generate");
   return response.data;
 };
