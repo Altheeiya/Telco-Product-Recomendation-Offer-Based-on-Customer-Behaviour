@@ -46,7 +46,7 @@ const Profile = () => {
       const totalPurchases = transactions.length;
       const totalSpent = transactions.reduce((acc, curr) => acc + curr.amount, 0);
       // Contoh logika poin: 1 poin tiap kelipatan 10.000
-      const loyaltyPoints = Math.floor(totalSpent / 10000); 
+      const loyaltyPoints = Math.floor(totalSpent / 1000); 
 
       // 4. Set State
       setProfileData(userData);
@@ -289,7 +289,7 @@ const Profile = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold text-jet">{stats.loyaltyPoints}</p>
-                <p className="text-sm text-darkgrey">Loyalty Points</p>
+                <p className="text-sm text-darkgrey">Telco Points</p>
               </div>
             </div>
           </div>

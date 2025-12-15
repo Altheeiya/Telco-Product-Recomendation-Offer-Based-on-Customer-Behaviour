@@ -2,13 +2,18 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getUser } from '../utils/auth';
 import { getUserRecommendations } from '../services/recommendationService';
-import { getUserProfile } from '../services/userService';
+import { getUserProfile, topUpBalance } from '../services/userService';
 
 const Dashboard = () => {
   const user = getUser();
   const [recommendations, setRecommendations] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // State untuk Modal Top Up
+  const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState('');
+  const [topUpLoading, setTopUpLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -17,11 +22,9 @@ const Dashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch profile data (balance, data_remaining, badge)
       const profileResponse = await getUserProfile();
       setUserProfile(profileResponse.data);
 
-      // Fetch recommendations
       const recResponse = await getUserRecommendations();
       const recData = recResponse.data || [];
       setRecommendations(recData.slice(0, 2));
@@ -32,43 +35,64 @@ const Dashboard = () => {
     }
   };
 
-  // Helper: Format rupiah
-  const formatRupiah = (amount) => {
+  // 1. Buka Modal
+  const handleTopUpClick = () => {
+    setTopUpAmount(''); // Reset input
+    setShowTopUpModal(true);
+  };
+
+  // 2. Submit Top Up via Modal
+  const submitTopUp = async () => {
+    const amount = parseFloat(topUpAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
+    setTopUpLoading(true);
+    try {
+      await topUpBalance(amount);
+      alert("Top Up Successful!");
+      setShowTopUpModal(false); // Tutup modal
+      fetchData(); // Refresh data saldo
+    } catch (err) {
+      console.error(err);
+      alert("Top Up Failed: " + (err.response?.data?.message || err.message));
+    } finally {
+      setTopUpLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID').format(amount || 0);
   };
 
-  // Helper: Calculate data usage percentage (Visual Bar)
   const getDataPercentage = () => {
     if (!userProfile) return 0;
-    const total = 50; // Asumsi visual max 50GB
+    const total = 50; 
     const remaining = userProfile.data_remaining_gb || 0;
     return Math.min(100, (remaining / total) * 100);
   };
 
-  // Helper: Get expiry date (30 days from now)
   const getExpiryDate = () => {
     const date = new Date();
     date.setDate(date.getDate() + 30);
-    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
   };
 
-  // Helper: Calculate loyalty points (1 point per 10k spend)
   const getLoyaltyPoints = () => {
     if (!userProfile) return 0;
-    return Math.floor((userProfile.monthly_spend || 0) / 10000);
+    return Math.floor((userProfile.monthly_spend || 0) / 1000);
   };
 
-  // Helper: Get badge level based on monthly_spend
   const getBadgeLevel = () => {
     if (!userProfile) return 'Bronze';
     const spend = userProfile.monthly_spend || 0;
-    
     if (spend > 150000) return 'Gold';
     if (spend > 50000) return 'Silver';
     return 'Bronze';
   };
 
-  // Helper: Get badge color
   const getBadgeColor = () => {
     const badge = getBadgeLevel();
     if (badge === 'Gold') return 'bg-yellow-500/20 border-yellow-500/30 text-yellow-100';
@@ -77,10 +101,74 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="bg-purewhite min-h-screen flex flex-col">
+    <div className="bg-purewhite min-h-screen flex flex-col relative">
+      
+      {/* --- MODAL TOP UP --- */}
+      {showTopUpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-fadeIn">
+            <div className="bg-emerald p-4 text-center">
+              <h3 className="text-xl font-bold text-white">Top Up Balance</h3>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-darkgrey mb-4 text-center text-sm">
+                Enter the amount to add to your balance.
+              </p>
+              
+              <div className="relative mb-6">
+                <span className="absolute left-4 top-3 text-gray-400 font-bold">Rp</span>
+                <input 
+                  type="number" 
+                  value={topUpAmount}
+                  onChange={(e) => setTopUpAmount(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald focus:border-transparent font-bold text-jet text-lg text-right"
+                  placeholder="50000"
+                  autoFocus
+                />
+              </div>
+
+              {/* Pilihan Cepat (Optional) */}
+              <div className="flex justify-between gap-2 mb-6">
+                {[50000, 100000, 200000].map(val => (
+                  <button 
+                    key={val}
+                    onClick={() => setTopUpAmount(val)}
+                    className="text-xs bg-gray-100 hover:bg-emerald/10 hover:text-emerald text-gray-600 py-2 px-2 rounded-lg transition border border-transparent hover:border-emerald/30 flex-1"
+                  >
+                    {val / 1000}k
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex space-x-3">
+                <button 
+                  onClick={() => setShowTopUpModal(false)}
+                  className="flex-1 py-3 px-4 bg-gray-100 text-darkgrey font-semibold rounded-xl hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={submitTopUp}
+                  disabled={topUpLoading}
+                  className="flex-1 py-3 px-4 bg-emerald text-white font-bold rounded-xl hover:bg-emerald-600 shadow-lg shadow-emerald/20 transition disabled:opacity-70 flex justify-center items-center"
+                >
+                  {topUpLoading ? (
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : 'Confirm'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* --- END MODAL --- */}
+
       <header className="bg-jet pb-32 pt-10 rounded-b-[3rem] shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald opacity-10 rounded-full blur-3xl -mr-16 -mt-16"></div>
-
         <div className="container mx-auto px-6 relative z-10">
           <div className="flex justify-between items-start mb-6">
             <div>
@@ -96,15 +184,21 @@ const Dashboard = () => {
 
       <main className="container mx-auto px-6 -mt-24 flex-grow mb-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* 1. PULSA (Sebelumnya Main Balance) */}
-          <div className="bg-silver p-6 rounded-2xl shadow-lg border border-white hover:shadow-xl transition transform hover:-translate-y-1">
+          
+          {/* 1. BALANCE (Pulsa) */}
+          <div className="bg-silver p-6 rounded-2xl shadow-lg border border-white hover:shadow-xl transition transform hover:-translate-y-1 relative group">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-darkgrey text-sm font-semibold">Pulsa</span>
-              <div className="bg-white p-2 rounded-full shadow-sm">
-                <svg className="w-5 h-5 text-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              <span className="text-darkgrey text-sm font-semibold">Balance</span>
+              {/* Tombol Top Up membuka Modal */}
+              <button 
+                onClick={handleTopUpClick}
+                className="bg-emerald hover:bg-emerald-600 text-white p-2 rounded-full shadow-md transition transform hover:scale-110 flex items-center justify-center w-8 h-8"
+                title="Top Up Balance"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-              </div>
+              </button>
             </div>
             {loading ? (
               <div className="animate-pulse">
@@ -114,17 +208,25 @@ const Dashboard = () => {
             ) : (
               <>
                 <h2 className="text-3xl font-bold text-jet mb-2">
-                  Rp {formatRupiah(userProfile?.balance || 0)}
+                  Rp {formatCurrency(userProfile?.balance || 0)}
                 </h2>
-                <p className="text-xs text-emerald font-medium">Active until {getExpiryDate()}</p>
+                <div className="flex justify-between items-end">
+                    <p className="text-xs text-emerald font-medium">Active until {getExpiryDate()}</p>
+                    <span 
+                      className="text-[10px] text-gray-500 cursor-pointer hover:text-emerald" 
+                      onClick={handleTopUpClick}
+                    >
+                        Click + to Top Up
+                    </span>
+                </div>
               </>
             )}
           </div>
 
-          {/* 2. KUOTA INTERNET */}
+          {/* 2. INTERNET QUOTA */}
           <div className="bg-silver p-6 rounded-2xl shadow-lg border border-white hover:shadow-xl transition transform hover:-translate-y-1">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-darkgrey text-sm font-semibold">Kuota Internet</span>
+              <span className="text-darkgrey text-sm font-semibold">Internet Quota</span>
               <div className="bg-white p-2 rounded-full shadow-sm">
                 <svg className="w-5 h-5 text-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -152,7 +254,7 @@ const Dashboard = () => {
                   ></div>
                 </div>
                 <p className="text-xs text-darkgrey text-right">
-                  Total Aktif: {userProfile?.data_remaining_gb?.toFixed(1) || 0} GB
+                  Total Active: {userProfile?.data_remaining_gb?.toFixed(1) || 0} GB
                 </p>
               </>
             )}
@@ -181,7 +283,7 @@ const Dashboard = () => {
                   </h2>
                   <span className="text-lg font-medium text-darkgrey mb-1">pts</span>
                 </div>
-                <p className="text-xs text-gray-600">1 poin = Rp 10.000 belanja</p>
+                <p className="text-xs text-gray-600">1 point = Rp 1.000 spent</p>
               </>
             )}
           </div>
@@ -200,12 +302,12 @@ const Dashboard = () => {
               <p className="text-darkgrey opacity-80 max-w-md">
                 {(userProfile?.monthly_spend || 0) > 0 ? (
                   <>
-                    AI menyesuaikan rekomendasi berdasarkan pengeluaran Anda sebesar{' '}
-                    <span className="font-bold text-emerald">Rp {formatRupiah(userProfile.monthly_spend)}</span>. 
-                    Hemat hingga 50% hari ini!
+                    AI customized recommendations based on your spending of{' '}
+                    <span className="font-bold text-emerald">Rp {formatCurrency(userProfile.monthly_spend)}</span>. 
+                    Save up to 50% today!
                   </>
                 ) : (
-                  'Halo Member Baru! Mulai transaksi pertama Anda untuk mengaktifkan Personal AI Assistant.'
+                  'Hello New Member! Start your first transaction to activate your Personal AI Assistant.'
                 )}
               </p>
             </div>
@@ -216,7 +318,7 @@ const Dashboard = () => {
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
-              {userProfile?.monthly_spend > 0 ? 'Cek Penawaran AI' : 'Mulai Belanja'}
+              {userProfile?.monthly_spend > 0 ? 'Check AI Offers' : 'Start Shopping'}
             </Link>
           </div>
         </div>
@@ -224,7 +326,7 @@ const Dashboard = () => {
         {/* Recommended Products */}
         <div>
           <h3 className="text-xl font-bold text-jet mb-6 border-l-4 border-emerald pl-3">
-            Rekomendasi Untuk Anda
+            Recommended for You
           </h3>
 
           {loading ? (
@@ -233,21 +335,21 @@ const Dashboard = () => {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Memuat rekomendasi AI...
+              Loading AI recommendations...
             </div>
           ) : recommendations.length === 0 ? (
             <div className="bg-white border border-gray-100 rounded-xl p-8 text-center">
               <p className="text-darkgrey mb-4">
                 {userProfile?.monthly_spend > 0 
-                  ? `AI sedang menganalisis pola belanja Anda (Rp ${formatRupiah(userProfile.monthly_spend)})...`
-                  : 'Belanja pertama Anda untuk mendapatkan rekomendasi AI yang personal!'
+                  ? `AI is analyzing your spending patterns (Rp ${formatCurrency(userProfile.monthly_spend)})...`
+                  : 'Make your first purchase to get personalized AI recommendations!'
                 }
               </p>
               <Link
                 to="/products"
                 className="inline-block bg-emerald text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition"
               >
-                Lihat Semua Produk
+                View All Products
               </Link>
             </div>
           ) : (
@@ -292,7 +394,7 @@ const Dashboard = () => {
                       to={`/products/${rec.product?.id}`}
                       className="bg-emerald text-white text-sm font-semibold py-2 px-6 rounded-lg hover:bg-emerald-600 transition w-full md:w-auto text-center"
                     >
-                      Beli Sekarang
+                      Buy Now
                     </Link>
                   </div>
                 </div>
