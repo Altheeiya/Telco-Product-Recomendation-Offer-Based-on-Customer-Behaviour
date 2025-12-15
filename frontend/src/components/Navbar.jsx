@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { isAuthenticated, getUser, isAdmin, removeUser } from '../utils/auth';
+import { isAuthenticated, getUser, isAdmin, logout } from '../utils/auth';
 
 const Navbar = () => {
+  const navigate = useNavigate();
   const user = getUser();
   const adminUser = isAdmin();
   const [open, setOpen] = useState(false);
@@ -10,13 +11,19 @@ const Navbar = () => {
   const closeMenu = () => setOpen(false);
 
   const handleLogout = () => {
-    removeUser();
+    // ✅ PERBAIKAN: Gunakan fungsi logout() yang sudah ada di auth.js
+    logout();
+    
+    // Force reload dan redirect
     window.location.href = '/login';
   };
 
-  // lock scroll saat menu kebuka (biar nggak chaos)
+  // Lock scroll saat menu mobile terbuka
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : 'auto';
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
   }, [open]);
 
   return (
@@ -42,36 +49,55 @@ const Navbar = () => {
               <>
                 {!adminUser ? (
                   <>
-                    <Link to="/dashboard" className="nav-link">Home</Link>
-                    <Link to="/products" className="nav-link">Products</Link>
-                    <Link to="/transactions" className="nav-link">History</Link>
-                    <Link to="/profile" className="nav-link">Profile</Link>
+                    <Link to="/dashboard" className="hover:text-emerald transition px-3 py-2 rounded-lg">
+                      Home
+                    </Link>
+                    <Link to="/products" className="hover:text-emerald transition px-3 py-2 rounded-lg">
+                      Products
+                    </Link>
+                    <Link to="/transactions" className="hover:text-emerald transition px-3 py-2 rounded-lg">
+                      History
+                    </Link>
+                    <Link to="/profile" className="hover:text-emerald transition px-3 py-2 rounded-lg">
+                      Profile
+                    </Link>
                   </>
                 ) : (
                   <>
-                    <Link to="/admin/dashboard" className="nav-link">Dashboard</Link>
-                    <Link to="/admin/products" className="nav-link">Products</Link>
-                    <Link to="/admin/users" className="nav-link">Users</Link>
-                    <Link to="/admin/transactions" className="nav-link">Transactions</Link>
+                    <Link to="/admin/dashboard" className="hover:text-emerald transition px-3 py-2 rounded-lg">
+                      Dashboard
+                    </Link>
+                    <Link to="/admin/products" className="hover:text-emerald transition px-3 py-2 rounded-lg">
+                      Products
+                    </Link>
+                    <Link to="/admin/users" className="hover:text-emerald transition px-3 py-2 rounded-lg">
+                      Users
+                    </Link>
+                    <Link to="/admin/transactions" className="hover:text-emerald transition px-3 py-2 rounded-lg">
+                      Transactions
+                    </Link>
                   </>
                 )}
 
-                <div className="text-right">
+                <div className="text-right ml-4">
                   <p className="text-xs text-gray-400">Welcome,</p>
-                  <p className="text-sm font-semibold">{user?.username}</p>
+                  <p className="text-sm font-semibold">{user?.username || 'User'}</p>
                 </div>
 
+                {/* ✅ PERBAIKAN: Tambah styling hover dan cursor pointer */}
                 <button
                   onClick={handleLogout}
-                  className="bg-white/10 border border-white/20 px-4 py-2 rounded-lg hover:bg-white/20 transition"
+                  className="bg-white/10 border border-white/20 px-4 py-2 rounded-lg hover:bg-red-500 hover:border-red-500 transition cursor-pointer"
                 >
                   Logout
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="nav-link">Login</Link>
-                <Link to="/register" className="bg-emerald px-4 py-2 rounded-lg font-semibold">
+                <Link to="/login" className="hover:text-emerald transition px-3 py-2 rounded-lg">
+                  Login
+                </Link>
+                <Link to="/register" className="bg-emerald px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition">
                   Register
                 </Link>
               </>
@@ -81,7 +107,8 @@ const Navbar = () => {
           {/* HAMBURGER */}
           <button
             onClick={() => setOpen(true)}
-            className="md:hidden text-3xl"
+            className="md:hidden text-3xl hover:text-emerald transition"
+            aria-label="Open menu"
           >
             ☰
           </button>
@@ -97,47 +124,81 @@ const Navbar = () => {
         {/* CLOSE */}
         <button
           onClick={closeMenu}
-          className="absolute top-6 right-6 text-3xl"
+          className="absolute top-6 right-6 text-3xl hover:text-emerald transition"
+          aria-label="Close menu"
         >
           ✕
         </button>
 
         <div className="h-full flex flex-col justify-center px-8 gap-6 text-lg">
           {isAuthenticated() && (
-            <div className="mb-4">
+            <div className="mb-4 pb-4 border-b border-white/20">
               <p className="text-sm text-gray-400">Logged in as</p>
-              <p className="text-2xl font-bold">{user?.username}</p>
+              <p className="text-2xl font-bold">{user?.username || 'User'}</p>
+              <p className="text-sm text-gray-400">{user?.email}</p>
             </div>
           )}
 
           {!adminUser ? (
             <>
-              <Link to="/dashboard" onClick={closeMenu} className="spotify-link">
-                Home
+              <Link 
+                to="/dashboard" 
+                onClick={closeMenu} 
+                className="hover:text-emerald transition py-2 px-4 rounded-lg hover:bg-white/10"
+              >
+                🏠 Home
               </Link>
-              <Link to="/products" onClick={closeMenu} className="spotify-link">
-                Products
+              <Link 
+                to="/products" 
+                onClick={closeMenu} 
+                className="hover:text-emerald transition py-2 px-4 rounded-lg hover:bg-white/10"
+              >
+                📦 Products
               </Link>
-              <Link to="/transactions" onClick={closeMenu} className="spotify-link">
-                History
+              <Link 
+                to="/transactions" 
+                onClick={closeMenu} 
+                className="hover:text-emerald transition py-2 px-4 rounded-lg hover:bg-white/10"
+              >
+                📜 History
               </Link>
-              <Link to="/profile" onClick={closeMenu} className="spotify-link">
-                Profile
+              <Link 
+                to="/profile" 
+                onClick={closeMenu} 
+                className="hover:text-emerald transition py-2 px-4 rounded-lg hover:bg-white/10"
+              >
+                👤 Profile
               </Link>
             </>
           ) : (
             <>
-              <Link to="/admin/dashboard" onClick={closeMenu} className="spotify-link">
-                Dashboard
+              <Link 
+                to="/admin/dashboard" 
+                onClick={closeMenu} 
+                className="hover:text-emerald transition py-2 px-4 rounded-lg hover:bg-white/10"
+              >
+                📊 Dashboard
               </Link>
-              <Link to="/admin/products" onClick={closeMenu} className="spotify-link">
-                Products
+              <Link 
+                to="/admin/products" 
+                onClick={closeMenu} 
+                className="hover:text-emerald transition py-2 px-4 rounded-lg hover:bg-white/10"
+              >
+                📦 Products
               </Link>
-              <Link to="/admin/users" onClick={closeMenu} className="spotify-link">
-                Users
+              <Link 
+                to="/admin/users" 
+                onClick={closeMenu} 
+                className="hover:text-emerald transition py-2 px-4 rounded-lg hover:bg-white/10"
+              >
+                👥 Users
               </Link>
-              <Link to="/admin/transactions" onClick={closeMenu} className="spotify-link">
-                Transactions
+              <Link 
+                to="/admin/transactions" 
+                onClick={closeMenu} 
+                className="hover:text-emerald transition py-2 px-4 rounded-lg hover:bg-white/10"
+              >
+                💳 Transactions
               </Link>
             </>
           )}
@@ -145,16 +206,24 @@ const Navbar = () => {
           {isAuthenticated() ? (
             <button
               onClick={handleLogout}
-              className="mt-8 w-full bg-red-500/20 text-red-400 py-3 rounded-xl text-center"
+              className="mt-8 w-full bg-red-500/20 border border-red-500/50 text-red-400 py-3 rounded-xl text-center hover:bg-red-500 hover:text-white transition font-semibold"
             >
-              Logout
+              🚪 Logout
             </button>
           ) : (
             <>
-              <Link to="/login" onClick={closeMenu} className="spotify-link">
+              <Link 
+                to="/login" 
+                onClick={closeMenu} 
+                className="hover:text-emerald transition py-2 px-4 rounded-lg hover:bg-white/10"
+              >
                 Login
               </Link>
-              <Link to="/register" onClick={closeMenu} className="spotify-link">
+              <Link 
+                to="/register" 
+                onClick={closeMenu} 
+                className="bg-emerald px-4 py-3 rounded-lg text-center hover:bg-emerald-600 transition"
+              >
                 Register
               </Link>
             </>
