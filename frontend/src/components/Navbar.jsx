@@ -11,10 +11,7 @@ const Navbar = () => {
   const closeMenu = () => setOpen(false);
 
   const handleLogout = () => {
-    // ✅ PERBAIKAN: Gunakan fungsi logout() yang sudah ada di auth.js
     logout();
-    
-    // Force reload dan redirect
     window.location.href = '/login';
   };
 
@@ -31,17 +28,30 @@ const Navbar = () => {
       {/* NAVBAR */}
       <nav className="bg-jet text-white shadow-lg relative z-50">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-          {/* LOGO */}
+          
+          {/* --- LOGO BARU (Icon Sinyal) + TULISAN LAMA --- */}
           <Link
             to={adminUser ? '/admin/dashboard' : '/'}
-            className="flex items-center gap-2"
+            className="flex items-center gap-3 group"
             onClick={closeMenu}
           >
-            <div className="w-8 h-8 bg-emerald rounded-full flex items-center justify-center">
-              ⚡
+            {/* Icon Container (Baru) */}
+            <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-teal-400 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition duration-300">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-6 w-6 text-white" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+              </svg>
             </div>
+            
+            {/* Text Tetap "Telco" */}
             <span className="text-xl font-bold">Telco</span>
           </Link>
+          {/* ----------------------------------------------- */}
 
           {/* DESKTOP MENU */}
           <div className="hidden md:flex gap-4 items-center">
@@ -84,7 +94,6 @@ const Navbar = () => {
                   <p className="text-sm font-semibold">{user?.username || 'User'}</p>
                 </div>
 
-                {/* ✅ PERBAIKAN: Tambah styling hover dan cursor pointer */}
                 <button
                   onClick={handleLogout}
                   className="bg-white/10 border border-white/20 px-4 py-2 rounded-lg hover:bg-red-500 hover:border-red-500 transition cursor-pointer"
