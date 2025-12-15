@@ -1,115 +1,167 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { isAuthenticated, logout, getUser, isAdmin } from '../utils/auth';
+import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { isAuthenticated, getUser, isAdmin, removeUser } from '../utils/auth';
 
 const Navbar = () => {
-  const navigate = useNavigate();
   const user = getUser();
   const adminUser = isAdmin();
+  const [open, setOpen] = useState(false);
+
+  const closeMenu = () => setOpen(false);
 
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    removeUser();
+    window.location.href = '/login';
   };
 
-  return (
-    <nav className="bg-jet text-white shadow-lg">
-      <div className="container mx-auto px-6 py-4">
-        <div className="flex justify-between items-center">
+  // lock scroll saat menu kebuka (biar nggak chaos)
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : 'auto';
+  }, [open]);
 
+  return (
+    <>
+      {/* NAVBAR */}
+      <nav className="bg-jet text-white shadow-lg relative z-50">
+        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           {/* LOGO */}
-          <Link to={adminUser ? "/admin/dashboard" : "/"} className="flex items-center space-x-2">
+          <Link
+            to={adminUser ? '/admin/dashboard' : '/'}
+            className="flex items-center gap-2"
+            onClick={closeMenu}
+          >
             <div className="w-8 h-8 bg-emerald rounded-full flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+              ⚡
             </div>
-            <span className="text-xl font-bold tracking-tight">Telco</span>
+            <span className="text-xl font-bold">Telco</span>
           </Link>
 
-          {/* MENU */}
-          <div className="flex gap-4 items-center">
+          {/* DESKTOP MENU */}
+          <div className="hidden md:flex gap-4 items-center">
             {isAuthenticated() ? (
               <>
-                {/* ===== ADMIN MENU ===== */}
-                {adminUser ? (
+                {!adminUser ? (
                   <>
-                    <Link to="/admin/dashboard" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
-                      Dashboard
-                    </Link>
-                    <Link to="/admin/products" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
-                      Products
-                    </Link>
-                    <Link to="/admin/users" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
-                      Users
-                    </Link>
-                    <Link to="/admin/transactions" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
-                      Transactions
-                    </Link>
+                    <Link to="/dashboard" className="nav-link">Home</Link>
+                    <Link to="/products" className="nav-link">Products</Link>
+                    <Link to="/transactions" className="nav-link">History</Link>
+                    <Link to="/profile" className="nav-link">Profile</Link>
                   </>
                 ) : (
-                  /* ===== USER MENU ===== */
                   <>
-                    <Link to="/dashboard" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
-                      Home
-                    </Link>
-                    <Link to="/products" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
-                      Products
-                    </Link>
-                    <Link to="/transactions" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
-                      History
-                    </Link>
-                    <Link to="/profile" className="hidden md:block text-sm font-medium text-gray-300 hover:text-emerald transition">
-                      Profile
-                    </Link>
+                    <Link to="/admin/dashboard" className="nav-link">Dashboard</Link>
+                    <Link to="/admin/products" className="nav-link">Products</Link>
+                    <Link to="/admin/users" className="nav-link">Users</Link>
+                    <Link to="/admin/transactions" className="nav-link">Transactions</Link>
                   </>
                 )}
 
-                {/* USER INFO */}
-                <div className="flex items-center space-x-3">
-                  <Link
-                    to={adminUser ? "/admin/dashboard" : "/profile"}
-                    className="text-right hidden sm:block hover:opacity-80 transition"
-                  >
-                    <p className="text-xs text-gray-400">Welcome,</p>
-                    <p className="text-sm font-semibold">{user?.username}</p>
-                  </Link>
-
-                  <Link
-                    to={adminUser ? "/admin/dashboard" : "/profile"}
-                    className="w-10 h-10 rounded-full bg-emerald flex items-center justify-center text-white font-bold border-2 border-gray-700 hover:border-emerald transition relative"
-                  >
-                    {user?.username?.charAt(0)?.toUpperCase()}
-                    {adminUser && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald rounded-full border-2 border-jet" />
-                    )}
-                  </Link>
+                <div className="text-right">
+                  <p className="text-xs text-gray-400">Welcome,</p>
+                  <p className="text-sm font-semibold">{user?.username}</p>
                 </div>
 
-                {/* LOGOUT */}
                 <button
                   onClick={handleLogout}
-                  className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition text-sm"
+                  className="bg-white/10 border border-white/20 px-4 py-2 rounded-lg hover:bg-white/20 transition"
                 >
                   Logout
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="text-sm font-medium text-gray-300 hover:text-emerald transition">
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  className="bg-emerald text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition text-sm font-semibold"
-                >
+                <Link to="/login" className="nav-link">Login</Link>
+                <Link to="/register" className="bg-emerald px-4 py-2 rounded-lg font-semibold">
                   Register
                 </Link>
               </>
             )}
           </div>
+
+          {/* HAMBURGER */}
+          <button
+            onClick={() => setOpen(true)}
+            className="md:hidden text-3xl"
+          >
+            ☰
+          </button>
+        </div>
+      </nav>
+
+      {/* FULLSCREEN MOBILE MENU */}
+      <div
+        className={`fixed inset-0 bg-black/90 backdrop-blur-xl text-white z-50
+        transform transition-transform duration-300 ease-out
+        ${open ? 'translate-y-0' : '-translate-y-full'}`}
+      >
+        {/* CLOSE */}
+        <button
+          onClick={closeMenu}
+          className="absolute top-6 right-6 text-3xl"
+        >
+          ✕
+        </button>
+
+        <div className="h-full flex flex-col justify-center px-8 gap-6 text-lg">
+          {isAuthenticated() && (
+            <div className="mb-4">
+              <p className="text-sm text-gray-400">Logged in as</p>
+              <p className="text-2xl font-bold">{user?.username}</p>
+            </div>
+          )}
+
+          {!adminUser ? (
+            <>
+              <Link to="/dashboard" onClick={closeMenu} className="spotify-link">
+                Home
+              </Link>
+              <Link to="/products" onClick={closeMenu} className="spotify-link">
+                Products
+              </Link>
+              <Link to="/transactions" onClick={closeMenu} className="spotify-link">
+                History
+              </Link>
+              <Link to="/profile" onClick={closeMenu} className="spotify-link">
+                Profile
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/admin/dashboard" onClick={closeMenu} className="spotify-link">
+                Dashboard
+              </Link>
+              <Link to="/admin/products" onClick={closeMenu} className="spotify-link">
+                Products
+              </Link>
+              <Link to="/admin/users" onClick={closeMenu} className="spotify-link">
+                Users
+              </Link>
+              <Link to="/admin/transactions" onClick={closeMenu} className="spotify-link">
+                Transactions
+              </Link>
+            </>
+          )}
+
+          {isAuthenticated() ? (
+            <button
+              onClick={handleLogout}
+              className="mt-8 w-full bg-red-500/20 text-red-400 py-3 rounded-xl text-center"
+            >
+              Logout
+            </button>
+          ) : (
+            <>
+              <Link to="/login" onClick={closeMenu} className="spotify-link">
+                Login
+              </Link>
+              <Link to="/register" onClick={closeMenu} className="spotify-link">
+                Register
+              </Link>
+            </>
+          )}
         </div>
       </div>
-    </nav>
+    </>
   );
 };
 

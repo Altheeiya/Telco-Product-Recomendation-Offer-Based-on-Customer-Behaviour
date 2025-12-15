@@ -23,6 +23,8 @@ export const getUser = () => {
     return JSON.parse(user);
   } catch (error) {
     console.error("Error parsing user data:", error);
+    // Jika data korup, sebaiknya dihapus agar tidak error terus
+    localStorage.removeItem("user");
     return null;
   }
 };
@@ -31,12 +33,16 @@ export const removeUser = () => {
   localStorage.removeItem("user");
 };
 
+// Fungsi logout membersihkan semua storage
 export const logout = () => {
   removeToken();
   removeUser();
+  // Opsional: Hapus item lain jika ada
+  // localStorage.clear(); // Gunakan ini jika ingin menghapus SEMUA data localstorage situs ini
 };
 
 export const isAuthenticated = () => {
+  // Cek keberadaan token
   return !!getToken();
 };
 
