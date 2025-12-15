@@ -5,7 +5,6 @@ const { PythonShell } = require('python-shell');
 const path = require('path');
 const axios = require('axios');
 const fs = require('fs');
-const db = require('./models'); // Sequelize models
 
 // ============================================
 // KONFIGURASI
@@ -33,20 +32,6 @@ app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
-
-// ============================================
-// ROUTES
-// ============================================
-
-const authRoutes = require('./routes/auth');
-const productRoutes = require('./routes/products');
-const transactionRoutes = require('./routes/transactions');
-const adminRoutes = require('./routes/admin');
-
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/admin', adminRoutes);
 
 // ============================================
 // VALIDASI MODEL (TIDAK MEMATIKAN SERVER)
@@ -122,8 +107,7 @@ app.get('/health', (req, res) => {
     service: 'Telco Backend (API + ML)',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    database: db.sequelize ? 'connected' : 'not connected',
-    models: fs.existsSync(MODEL_PATH),
+    models: fs.existsSync(MODEL_PATH), // Cek ketersediaan model saja
     backend1: BACKEND1_URL
   });
 });
@@ -155,29 +139,36 @@ app.post('/api/predict', async (req, res) => {
   pyshell.on('message', msg => (output += msg));
 
   pyshell.on('close', async () => {
-    const result = JSON.parse(output);
-
     try {
-      const productsRes = await axios.get(`${BACKEND1_URL}/api/products`);
-      const products = productsRes.data.data || productsRes.data;
+        const result = JSON.parse(output);
+        
+        // Fetch data produk dari Backend-1 untuk mapping nama ke ID
+        try {
+            const productsRes = await axios.get(`${BACKEND1_URL}/api/products`);
+            const products = productsRes.data.data || productsRes.data;
 
-      result.prediction.recommendations = await Promise.all(
-        result.prediction.recommendations.map(async rec => {
-          const productId = await mapToProductIdDynamic(rec.offer, products);
-          const product = products.find(p => p.id === productId);
-          return {
-            ...rec,
-            productId,
-            productName: product?.name,
-            reason: generateReason(rec.offer, customerData)
-          };
-        })
-      );
-    } catch (e) {
-      console.warn('⚠️ Mapping produk gagal');
+            result.prediction.recommendations = await Promise.all(
+                result.prediction.recommendations.map(async rec => {
+                const productId = await mapToProductIdDynamic(rec.offer, products);
+                const product = products.find(p => p.id === productId);
+                return {
+                    ...rec,
+                    productId,
+                    productName: product?.name,
+                    reason: generateReason(rec.offer, customerData)
+                };
+                })
+            );
+        } catch (e) {
+            console.warn('⚠️ Mapping produk gagal, menggunakan data mentah dari ML:', e.message);
+        }
+
+        res.json({ status: 'success', data: result });
+    } catch (parseError) {
+        console.error('❌ Error parsing output Python:', parseError);
+        console.error('Output mentah:', output);
+        res.status(500).json({ message: 'Gagal memproses prediksi ML' });
     }
-
-    res.json({ status: 'success', data: result });
   });
 });
 
@@ -187,14 +178,10 @@ app.post('/api/predict', async (req, res) => {
 
 app.get('/', (req, res) => {
   res.json({
-    service: 'Telco Backend',
+    service: 'Telco ML Backend',
     version: 'FINAL',
     status: 'running',
     endpoints: [
-      '/api/auth',
-      '/api/products',
-      '/api/transactions',
-      '/api/admin',
       '/api/predict',
       '/health'
     ]
@@ -214,17 +201,6 @@ app.use((err, req, res, next) => {
 // START SERVER
 // ============================================
 
-db.sequelize
-  .sync()
-  .then(() => {
-    console.log('✅ Database connected');
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running at http://localhost:${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('❌ DB error:', err.message);
-    app.listen(PORT, () => {
-      console.log(`⚠️ Server running without DB at http://localhost:${PORT}`);
-    });
-  });
+app.listen(PORT, () => {
+  console.log(`🚀 ML Server running at http://localhost:${PORT}`);
+});

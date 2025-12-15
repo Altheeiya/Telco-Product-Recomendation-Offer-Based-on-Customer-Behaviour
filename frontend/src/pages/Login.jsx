@@ -27,19 +27,33 @@ const Login = () => {
     try {
       const data = await login(formData);
       console.log('Login response:', data);
+      
       if (data.token) {
         setToken(data.token);
       }
+      
+      // Ambil user data
+      const userData = data.user || {};
       if (data.user) {
         setUser(data.user);
       }
-      navigate('/');
+
+      // === PERBAIKAN DI SINI ===
+      // Jangan navigate('/'), tapi cek role-nya
+      if (userData.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/products');
+      }
+      // =========================
+
     } catch (err) {
+      console.error(err); // Debugging
       setError(err.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
-  };
+};
 
   return (
     <div className="min-h-screen bg-purewhite flex items-center justify-center px-4 py-12">

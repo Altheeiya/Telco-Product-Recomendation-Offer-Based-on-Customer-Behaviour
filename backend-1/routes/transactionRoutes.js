@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const transactionController = require('../controllers/transactionController');
-const authMiddleware = require('../middleware/authMiddleware'); // Import Middleware
+// UBAH BARIS INI: Gunakan destructuring untuk mengambil fungsi spesifik
+const { authenticateToken } = require('../middleware/authMiddleware'); 
 
 // Semua route di sini DIPROTEKSI (Wajib Login)
+
 // POST /api/transactions (Beli)
-router.post('/', authMiddleware, transactionController.createTransaction);
+// Karena sudah didestructure di atas, panggil langsung 'authenticateToken'
+router.post('/', authenticateToken, transactionController.createTransaction);
 
 // GET /api/transactions (Lihat History)
-router.get('/', authMiddleware, transactionController.getMyTransactions);
+router.get('/', authenticateToken, transactionController.getMyTransactions);
 
 module.exports = router;

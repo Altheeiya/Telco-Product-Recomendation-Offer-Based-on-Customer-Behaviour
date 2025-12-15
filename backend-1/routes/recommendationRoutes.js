@@ -1,13 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const recommendationController = require('../controllers/recommendationController');
-const authMiddleware = require('../middleware/authMiddleware');
+// UBAH BARIS INI: Ambil fungsi spesifik 'authenticateToken'
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 // Route lama
-router.post('/generate', authMiddleware, recommendationController.generateRecommendation);
-router.get('/', authMiddleware, recommendationController.getMyRecommendations);
+// Ganti 'authMiddleware' menjadi 'authenticateToken'
+router.post('/generate', authenticateToken, recommendationController.generateRecommendation);
+router.get('/', authenticateToken, recommendationController.getMyRecommendations);
 
 // ⭐ ROUTE BARU
-router.get('/check-and-generate', authMiddleware, recommendationController.checkAndGenerateIfEmpty);
+router.get('/check-and-generate', authenticateToken, recommendationController.checkAndGenerateIfEmpty);
 
 module.exports = router;

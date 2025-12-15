@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { Recommendation, UserBehavior } = require('../models'); // <--- TAMBAH UserBehavior
+const { Recommendation, UserBehavior } = require('../models');
 
 const ML_BACKEND_URL = process.env.ML_BACKEND_URL || 'http://localhost:5001';
 
@@ -8,8 +8,7 @@ exports.generateRecommendation = async (req, res) => {
         const userId = req.user.id;
         console.log(`🤖 Generating ML prediction for userId: ${userId}`);
 
-        // 1. [BARU] Ambil Data Kebiasaan User dari Database
-        // Kita tidak lagi pakai req.body dari frontend!
+        // 1. Ambil Data Kebiasaan User dari Database
         const behavior = await UserBehavior.findOne({ where: { userId } });
 
         if (!behavior) {
@@ -20,7 +19,6 @@ exports.generateRecommendation = async (req, res) => {
         }
 
         // 2. Siapkan Data untuk dikirim ke Python ML
-        // Format JSON ini HARUS SAMA PERSIS dengan yang diminta predict.py
         const customerData = {
             plan_type: behavior.plan_type,
             device_brand: behavior.device_brand,
@@ -34,16 +32,17 @@ exports.generateRecommendation = async (req, res) => {
             complaint_count: behavior.complaint_count
         };
 
-        // 3. Hapus Rekomendasi Lama (Supaya tidak double)
+        // 3. Hapus Rekomendasi Lama
         console.log(`🧹 Clearing old recommendations...`);
         await Recommendation.destroy({ where: { userId } });
 
-        // 4. Panggil Backend ML (Sama seperti sebelumnya)
-        console.log(`📡 Calling ML Backend with DB Data...`);
+        // 4. Panggil Backend ML
+        // PERBAIKAN: Gunakan endpoint '/api/predict' (bukan predict-save)
+        console.log(`📡 Calling ML Backend...`);
         
         const mlResponse = await axios.post(
-            `${ML_BACKEND_URL}/api/predict-save`,
-            { userId, customerData },
+            `${ML_BACKEND_URL}/api/predict`,
+            customerData, // Backend-2 mengharapkan body langsung berisi data customer atau dibungkus, sesuaikan dengan server.js backend-2
             { 
                 timeout: 35000,
                 headers: { 'Content-Type': 'application/json' }
@@ -51,10 +50,27 @@ exports.generateRecommendation = async (req, res) => {
         );
 
         if (mlResponse.data.status === 'success') {
+            const resultData = mlResponse.data.data; // Data dari backend-2
+            
+            // 5. SIMPAN HASIL KE DATABASE (Backend-1 yang bertugas menyimpan)
+            if (resultData.prediction && resultData.prediction.recommendations) {
+                const recsToSave = resultData.prediction.recommendations.map(rec => ({
+                    userId: userId,
+                    productId: rec.productId, // ID ini sudah dimapping oleh backend-2
+                    score: rec.score,
+                    reason: rec.reason
+                }));
+
+                if (recsToSave.length > 0) {
+                    await Recommendation.bulkCreate(recsToSave);
+                    console.log(`✅ Saved ${recsToSave.length} recommendations to DB`);
+                }
+            }
+
             res.json({
                 status: 'success',
-                message: 'Recommendations generated based on your usage history',
-                data: mlResponse.data.data
+                message: 'Recommendations generated and saved!',
+                data: resultData
             });
         } else {
             throw new Error('ML prediction failed');
@@ -77,7 +93,6 @@ exports.generateRecommendation = async (req, res) => {
     }
 };
 
-// ... (Function checkMLHealth biarkan saja, tidak perlu diubah)
 exports.checkMLHealth = async (req, res) => {
     try {
         const response = await axios.get(`${ML_BACKEND_URL}/health`, { timeout: 5000 });

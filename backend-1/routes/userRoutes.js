@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const authMiddleware = require('../middleware/authMiddleware'); // Pastikan path benar
+// PERBAIKAN: Gunakan destructuring
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 // API d & e
-router.get('/profile', authMiddleware, userController.getUserProfile);
+// PERBAIKAN: Gunakan 'authenticateToken' di kedua route ini
+router.get('/profile', authenticateToken, userController.getUserProfile);
+
 // API f
-router.put('/profile', authMiddleware, userController.updateProfile);
+router.put('/profile', authenticateToken, userController.updateProfile);
 
 module.exports = router;

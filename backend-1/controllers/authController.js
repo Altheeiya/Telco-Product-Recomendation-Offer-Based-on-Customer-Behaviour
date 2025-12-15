@@ -1,16 +1,12 @@
-const { User, UserBehavior } = require('../models');
+const { User, UserBehavior, Recommendation } = require('../models'); // Tambah Recommendation
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
 const axios = require('axios');
 
 const ML_BACKEND_URL = process.env.ML_BACKEND_URL || 'http://localhost:5001';
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key'; // Pastikan ini ada di env
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key'; 
 
-// =====================
-// HELPER: Sign Token
-// =====================
-// Revisi: Menambahkan parameter role ke dalam payload token
 const signToken = (id, role) => {
     return jwt.sign({ id, role }, JWT_SECRET, { expiresIn: '1d' });
 };
@@ -64,7 +60,6 @@ exports.register = async (req, res) => {
         // ⭐ TRIGGER ML GENERATION (NON-BLOCKING)
         triggerMLGeneration(newUser.id, behavior);
 
-        // Revisi: Menyertakan role saat generate token
         const token = signToken(newUser.id, newUser.role);
 
         res.status(201).json({
@@ -84,7 +79,7 @@ exports.register = async (req, res) => {
     }
 };
 
-// ⭐ FUNGSI BARU: Trigger ML (Non-blocking)
+// ⭐ FUNGSI PERBAIKAN: Trigger ML & Save to DB
 async function triggerMLGeneration(userId, behavior) {
     try {
         console.log(`🤖 [Background] Starting ML generation for user ${userId}`);
@@ -102,18 +97,33 @@ async function triggerMLGeneration(userId, behavior) {
             complaint_count: behavior.complaint_count
         };
 
+        // PERBAIKAN: Panggil endpoint /api/predict
         const mlResponse = await axios.post(
-            `${ML_BACKEND_URL}/api/predict-save`,
-            { userId, customerData },
+            `${ML_BACKEND_URL}/api/predict`,
+            customerData,
             { timeout: 30000 }
         );
 
         if (mlResponse.data.status === 'success') {
-            console.log(`✅ [Background] ML recommendations saved for user ${userId}`);
+            const resultData = mlResponse.data.data;
+            
+            // PERBAIKAN: Simpan hasil ke DB
+            if (resultData.prediction && resultData.prediction.recommendations) {
+                 const recsToSave = resultData.prediction.recommendations.map(rec => ({
+                    userId: userId,
+                    productId: rec.productId,
+                    score: rec.score,
+                    reason: rec.reason
+                }));
+
+                if (recsToSave.length > 0) {
+                    await Recommendation.bulkCreate(recsToSave);
+                    console.log(`✅ [Background] Saved ${recsToSave.length} ML recommendations for user ${userId}`);
+                }
+            }
         }
     } catch (error) {
         console.error(`❌ [Background] ML generation failed for user ${userId}:`, error.message);
-        // Tidak throw error karena non-blocking
     }
 }
 
@@ -144,7 +154,6 @@ exports.login = async (req, res) => {
             return res.status(400).json({ message: 'Email atau password salah' });
         }
 
-        // Revisi: Menyertakan role saat generate token
         const token = signToken(user.id, user.role);
 
         res.json({
